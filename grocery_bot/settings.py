@@ -141,7 +141,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CSRF_TRUSTED_ORIGINS = [
     "https://*.ngrok-free.dev",
     "https://semimystical-triter-sally.ngrok-free.dev",
-    'https://grocerybot.loca.lt'
+    'https://grocerybot.loca.lt',
+    'https://grocery-bot-nffi.onrender.com'
     
 ]
 
