@@ -91,36 +91,39 @@ def process_incoming_message(msg, contact):
     #     return
     if text in ['hi', 'hello', 'हाय', 'नमस्ते'] or state == 'start':
         send_reply_buttons(
-        from_phone,
-        "नमस्ते 👋\n100+ ग्रॉसरी आइटम उपलब्ध हैं 🛒",
-        [
-            {"id": "1", "title": "WhatsApp Menu"},
-            {"id": "web_menu", "title": "🔍 Search & Order"},
-            {"id": "2", "title": "Order Status"}
-        ]
-    )
-    session.state = "menu"
-    session.save()
+            from_phone,
+            "नमस्ते 👋\n100+ ग्रॉसरी आइटम उपलब्ध हैं 🛒",
+            [
+                {"id": "menu", "title": "🛒 WhatsApp Menu"},
+                {"id": "web_menu", "title": "🔍 Search & Order"},
+                {"id": "status", "title": "📦 Order Status"}
+            ]
+        )
+        session.state = "menu"
+        session.save()
+        return   # 🔥 IMPORTANT
+
 
 
     # Main Menu
-    if state == 'menu':
-        if text == '1':
-            send_list_menu(from_phone, get_menu_categories())
-            session.state = 'selecting_item'
-            session.save()
-        elif text == '2':
-            check_order_status(from_phone)
-        elif text == '3':
-            send_text(from_phone, "हेल्प: मेनू से आइटम चुनें → क्वांटिटी टाइप करें → कार्ट में जोड़ें → कन्फर्म करें।")
+    if text == 'menu':
+        send_list_menu(from_phone, get_menu_categories())
+        session.state = 'selecting_item'
+        session.save()
         return
-    
-    elif state == "menu" and text == "web_menu":
-        web_url = f"https://yourdomain.com/menu?phone={from_phone}"
-    send_text(
-        from_phone,
-        f"🔍 100+ आइटम सर्च करें:\n{web_url}\n\nऑर्डर WhatsApp पर auto चला जाएगा ✅"
-    )
+
+    elif text == 'web_menu':
+        web_url = f"https://grocery-bot-nffi.onrender.com/menu?phone={from_phone}"
+        send_text(
+            from_phone,
+            f"🔍 100+ आइटम सर्च करें:\n{web_url}\n\nऑर्डर WhatsApp पर auto आएगा ✅"
+        )
+        return
+
+    elif text == 'status':
+        check_order_status(from_phone)
+        return
+
 
 
     # Selecting item from list menu
