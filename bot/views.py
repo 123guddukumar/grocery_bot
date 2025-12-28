@@ -1,4 +1,6 @@
 import json
+import requests
+import google.generativeai as genai
 from decimal import Decimal
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -9,6 +11,9 @@ from .messages import *
 
 VERIFY_TOKEN = "grocery_bot_verify_123"
 
+# Configure Gemini
+genai.configure(api_key=settings.GEMINI_API_KEY)
+gemini_model = genai.GenerativeModel('gemini-1.5-flash')  # Fast & good for Hindi
 
 @csrf_exempt
 def webhook(request):
@@ -54,6 +59,15 @@ def process_incoming_message(msg, contact):
     from_phone = msg['from']
     msg_type = msg.get('type')
 
+    session = get_session(from_phone)
+
+    # Handle audio (voice note)
+    if msg_type == 'audio':
+        media_id = msg['audio']['id']
+        handle_voice_order(from_phone, media_id)
+        return
+
+    # Text or interactive
     if msg_type == 'text':
         text = msg['text']['body'].strip().lower()
     elif msg_type == 'interactive':
@@ -79,8 +93,6 @@ def process_incoming_message(msg, contact):
         handle_rider_command(from_phone, text)
         return
 
-    # Customer flow
-    session = get_session(from_phone)
     state = session.state
 
     # Start / Welcome
@@ -99,10 +111,17 @@ def process_incoming_message(msg, contact):
         elif text == '2':
             check_order_status(from_phone)
         elif text == '3':
-            send_text(from_phone, "हेल्प: मेनू से आइटम चुनें → क्वांटिटी टाइप करें → कार्ट में जोड़ें → कन्फर्म करें।")
+            send_text(from_phone, "हेल्प: मेनू से चुनें या वॉइस से बोलें।")
+        elif text == 'voice_order':
+            start_voice_order(from_phone)
         return
 
-    # Selecting item from list menu
+    # Voice/Text order flow
+    if state == 'voice_order_waiting':
+        process_voice_text_order(from_phone, msg['text']['body'])
+        return
+
+    # Normal menu flow (existing)
     if state == 'selecting_item':
         try:
             product = Product.objects.get(id=int(text), active=True)
@@ -111,16 +130,13 @@ def process_incoming_message(msg, contact):
             session.state = 'awaiting_quantity'
             session.save()
         except:
-            send_text(from_phone, "गलत चुनाव। कृपया मेनू से दोबारा चुनें।")
-            welcome_message(from_phone)  # fallback
+            send_text(from_phone, "गलत चुनाव। दोबारा मेनू से चुनें।")
         return
 
-    # Waiting for quantity after item selection
     if state == 'awaiting_quantity':
         add_to_cart_with_quantity(from_phone, text)
         return
 
-    # After adding items – button actions
     if state == 'adding_to_cart':
         if text == 'add_more':
             send_list_menu(from_phone, get_menu_categories())
@@ -130,7 +146,6 @@ def process_incoming_message(msg, contact):
             show_cart(from_phone)
         return
 
-    # Cart shown – confirm or back
     if state == 'viewing_cart':
         if text == 'confirm_order':
             confirm_order_start(from_phone)
@@ -140,7 +155,6 @@ def process_incoming_message(msg, contact):
             session.save()
         return
 
-    # Personal details
     if state == 'collecting_name':
         handle_name_input(from_phone, text.title())
         return
@@ -154,16 +168,134 @@ def process_incoming_message(msg, contact):
     session.save()
 
 
-# ---------------- MESSAGES & ACTIONS ----------------
+# ---------------- VOICE ORDER FUNCTIONS ----------------
 
 def welcome_message(to):
-    body = "नमस्ते! हमारी ग्रॉसरी दुकान में आपका स्वागत है।\n\nक्या करना चाहेंगे?"
+    body = "नमस्ते! 👋 हमारी ग्रॉसरी दुकान में स्वागत है।\n\nक्या करना चाहते हैं?"
     buttons = [
-        {"id": "1", "title": "ग्रॉसरी मेनू"},
+        {"id": "1", "title": "ग्रॉसरी मेनू देखें"},
+        {"id": "voice_order", "title": "वॉइस से ऑर्डर 🎤"},
         {"id": "2", "title": "ऑर्डर स्टेटस"},
         {"id": "3", "title": "हेल्प"}
     ]
     send_reply_buttons(to, body, buttons)
+
+
+def start_voice_order(phone):
+    send_text(phone, "बताएं क्या क्या चाहिए?\nवॉइस मैसेज भेजें या टाइप करें।\nउदाहरण: 5kg चावल, 2kg टमाटर, 1 पैकेट नमक")
+    session = get_session(phone)
+    session.state = 'voice_order_waiting'
+    session.save()
+
+
+def handle_voice_order(phone, media_id):
+    # Download audio
+    url = f"https://graph.facebook.com/v20.0/{media_id}"
+    headers = {"Authorization": f"Bearer {settings.WHATSAPP_TOKEN}"}
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        send_text(phone, "वॉइस मैसेज प्रोसेस करने में दिक्कत हुई। टाइप करके बताएं।")
+        return
+
+    audio_url = response.json()['url']
+    audio_response = requests.get(audio_url, headers=headers)
+    if audio_response.status_code != 200:
+        send_text(phone, "ऑडियो डाउनलोड नहीं हुआ। फिर कोशिश करें।")
+        return
+
+    # Upload to Gemini (as bytes)
+    audio_file = genai.upload_file(audio_response.content, mime_type="audio/ogg")
+    
+    send_text(phone, "आपका वॉइस ऑर्डर प्रोसेस हो रहा है... थोड़ा इंतज़ार करें ⏳")
+    
+    # Call Gemini
+    prompt = """
+    ये ग्रॉसरी ऑर्डर है हिंदी/हिंग्लिश में। हर आइटम को निकालो: product name और quantity.
+    उपलब्ध प्रोडक्ट्स: {products}
+    
+    आउटपुट सिर्फ JSON:
+    [
+      {{"name": "मिलान किया गया प्रोडक्ट नेम", "quantity": "2kg", "original": "tamatr 2kg"}},
+      ...
+    ]
+    अगर कोई आइटम मैच न करे तो null quantity रखो।
+    """.format(products=", ".join([p.name for p in Product.objects.filter(active=True)]))
+    
+    response = gemini_model.generate_content([audio_file, prompt])
+    try:
+        parsed = json.loads(response.text)
+        process_parsed_items(phone, parsed)
+    except:
+        send_text(phone, "वॉइस समझ नहीं आया। उदाहरण: '5 किलो चावल, 2 किलो टमाटर' बोलकर भेजें।")
+
+
+def process_voice_text_order(phone, text):
+    products_list = ", ".join([p.name for p in Product.objects.filter(active=True)])
+    prompt = f"""
+    ये ग्रॉसरी ऑर्डर है: "{text}"
+    उपलब्ध आइटम्स: {products_list}
+    
+    हर आइटम निकालो और closest match करो (typos handle करो जैसे tamatr → टमाटर)
+    
+    JSON में लौटाओ:
+    [
+      {{"matched_product": "टमाटर", "quantity": "2kg", "original": "tamatr 2kg"}},
+      {{"matched_product": null, "quantity": null, "original": "xyz"}}
+    ]
+    """
+    
+    response = gemini_model.generate_content(prompt)
+    try:
+        parsed = json.loads(response.text)
+        process_parsed_items(phone, parsed)
+    except Exception as e:
+        send_text(phone, f"समझ नहीं आया 😕\nउदाहरण: 5kg चावल, 2kg टमाटर, 1 पैकेट नमक")
+
+
+def process_parsed_items(phone, items):
+    session = get_session(phone)
+    added = []
+    not_found = []
+    suggestions = []
+
+    for item in items:
+        if item.get('matched_product'):
+            try:
+                product = Product.objects.get(name__iexact=item['matched_product'], active=True)
+                qty_str = item['quantity'].lower().replace('kg', '').replace('किलो', '').strip() or '1'
+                qty = Decimal(qty_str)
+                session.cart[str(product.id)] = float(qty)
+                added.append(f"✅ {product.name} - {qty}kg")
+            except:
+                not_found.append(item['original'])
+        else:
+            not_found.append(item['original'])
+            # Suggest similar
+            similar = Product.objects.filter(name__icontains=item['original'].split()[0], active=True)[:2]
+            if similar:
+                suggestions.append(f"क्या मतलब था: {', '.join([p.name for p in similar])}?")
+
+    session.save()
+
+    msg = "आपका ऑर्डर समझ लिया:\n\n" + "\n".join(added)
+    if not_found:
+        msg += "\n\nये आइटम नहीं मिले: " + ", ".join(not_found)
+        if suggestions:
+            msg += "\n\n" + "\n".join(suggestions)
+
+    if added:
+        buttons = [
+            {"id": "add_more", "title": "और जोड़ें"},
+            {"id": "view_cart", "title": "कार्ट देखें"}
+        ]
+        send_reply_buttons(phone, msg, buttons)
+        session.state = 'adding_to_cart'
+    else:
+        send_text(phone, msg + "\n\nदोबारा बताएं या मेनू से चुनें।")
+        welcome_message(phone)
+        session.state = 'menu'
+
+    session.save()
 
 
 def send_product_detail(to, product):

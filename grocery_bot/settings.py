@@ -151,6 +151,8 @@ WHATSAPP_TOKEN = os.getenv('WHATSAPP_TOKEN')  # Permanent access token
 PHONE_NUMBER_ID = os.getenv('PHONE_NUMBER_ID')
 VERIFY_TOKEN = os.getenv('VERIFY_TOKEN', 'grocery_bot_verify_123')
 
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+
 # Business numbers
 OWNER_PHONE = os.getenv('OWNER_PHONE')          # e.g., "919876543210"
 RIDER_PHONES = os.getenv('RIDER_PHONES', '').split(',')  # comma-separated
