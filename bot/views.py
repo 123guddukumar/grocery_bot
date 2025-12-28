@@ -9,32 +9,56 @@ from .messages import *
 
 @csrf_exempt
 def webhook(request):
-    print("🔥 WEBHOOK HIT", request.method)
+    print("🔥 WEBHOOK HIT:", request.method)
+
+    # =========================
+    # VERIFY TOKEN (GET)
+    # =========================
     if request.method == 'GET':
-        # Verification
         mode = request.GET.get('hub.mode')
         token = request.GET.get('hub.verify_token')
         challenge = request.GET.get('hub.challenge')
+
+        print("🔍 VERIFY:", mode, token, challenge)
+
         if mode == 'subscribe' and token == settings.VERIFY_TOKEN:
-            # return JsonResponse({'hub.challenge': challenge})
             return HttpResponse(challenge, status=200)
-        return JsonResponse({'error': 'Forbidden'}, status=403)
 
-    elif request.method == 'POST':
+        return HttpResponse("Forbidden", status=403)
+
+    # =========================
+    # INCOMING EVENTS (POST)
+    # =========================
+    if request.method == 'POST':
         try:
-            body = json.loads(request.body)
-            if body.get('object') != 'whatsapp_business_account':
-                return JsonResponse({'status': 'ignored'})
+            body = json.loads(request.body.decode("utf-8"))
+            print("📩 RAW BODY:", json.dumps(body, indent=2))
 
-            for entry in body.get('entry', []):
-                for change in entry.get('changes', []):
-                    value = change.get('value', {})
-                    if 'messages' in value:
-                        for msg in value['messages']:
-                            process_incoming_message(msg, value.get('contacts', [{}])[0])
+            # Safety check
+            if body.get("object") != "whatsapp_business_account":
+                print("⚠️ Not a WhatsApp event")
+                return JsonResponse({"status": "ignored"})
+
+            for entry in body.get("entry", []):
+                for change in entry.get("changes", []):
+                    value = change.get("value", {})
+
+                    # 🚫 Ignore status / non-message events
+                    if "messages" not in value:
+                        print("ℹ️ Non-message event received")
+                        continue
+
+                    contacts = value.get("contacts", [{}])
+
+                    for msg in value["messages"]:
+                        print("💬 MESSAGE RECEIVED:", msg)
+                        process_incoming_message(msg, contacts[0])
+
         except Exception as e:
-            print("Error:", e)
-        return JsonResponse({'status': 'ok'})
+            print("❌ WEBHOOK ERROR:", e)
+
+        return JsonResponse({"status": "ok"})
+
 
 def process_incoming_message(msg, contact):
     from_phone = msg['from']
