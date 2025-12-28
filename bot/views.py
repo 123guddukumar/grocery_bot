@@ -27,6 +27,7 @@ def webhook(request):
         return HttpResponse("Verification failed", status=403)
 
     # ---------------- MESSAGE RECEIVE (POST) ----------------
+    # ---------------- MESSAGE RECEIVE (POST) ----------------
     if request.method == "POST":
         data = json.loads(request.body)
         print("📩 INCOMING DATA:", json.dumps(data, indent=2))
@@ -36,21 +37,27 @@ def webhook(request):
             change = entry["changes"][0]
             value = change["value"]
 
+            # 🚫 Ignore delivery/read status callbacks
+            if "statuses" in value:
+                return JsonResponse({"status": "status ignored"})
+
+            contacts = value.get("contacts", [])
+            contact = contacts[0] if contacts else {}
+
             if "messages" in value:
-                message = value["messages"][0]
-                phone = message["from"]
-                text = message["text"]["body"]
+                msg = value["messages"][0]
 
-                print("📞 FROM:", phone)
-                print("💬 TEXT:", text)
+                print("📞 FROM:", msg.get("from"))
+                print("💬 TYPE:", msg.get("type"))
 
-                # 🔥 AUTO REPLY (TEST)
-                send_text(phone, f"✅ Reply received: {text}")
+                # 🔥 REAL FLOW STARTS HERE
+                process_incoming_message(msg, contact)
 
         except Exception as e:
             print("❌ ERROR:", str(e))
 
         return JsonResponse({"status": "ok"})
+
 
 
 def process_incoming_message(msg, contact):
