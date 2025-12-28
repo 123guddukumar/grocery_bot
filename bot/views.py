@@ -84,11 +84,24 @@ def process_incoming_message(msg, contact):
     state = session.state
 
     # Start / Welcome
+    # if text in ['hi', 'hello', 'हाय', 'नमस्ते'] or state == 'start':
+    #     welcome_message(from_phone)
+    #     session.state = 'menu'
+    #     session.save()
+    #     return
     if text in ['hi', 'hello', 'हाय', 'नमस्ते'] or state == 'start':
-        welcome_message(from_phone)
-        session.state = 'menu'
-        session.save()
-        return
+        send_reply_buttons(
+        from_phone,
+        "नमस्ते 👋\n100+ ग्रॉसरी आइटम उपलब्ध हैं 🛒",
+        [
+            {"id": "1", "title": "WhatsApp Menu"},
+            {"id": "web_menu", "title": "🔍 Search & Order"},
+            {"id": "2", "title": "Order Status"}
+        ]
+    )
+    session.state = "menu"
+    session.save()
+
 
     # Main Menu
     if state == 'menu':
@@ -101,6 +114,14 @@ def process_incoming_message(msg, contact):
         elif text == '3':
             send_text(from_phone, "हेल्प: मेनू से आइटम चुनें → क्वांटिटी टाइप करें → कार्ट में जोड़ें → कन्फर्म करें।")
         return
+    
+    elif state == "menu" and text == "web_menu":
+        web_url = f"https://yourdomain.com/menu?phone={from_phone}"
+    send_text(
+        from_phone,
+        f"🔍 100+ आइटम सर्च करें:\n{web_url}\n\nऑर्डर WhatsApp पर auto चला जाएगा ✅"
+    )
+
 
     # Selecting item from list menu
     if state == 'selecting_item':
@@ -385,3 +406,13 @@ def check_order_status(phone):
         }.get(o.status, o.status)
         msg += f"#{o.id} - ₹{o.grand_total} - {status_hi}\n"
     send_text(phone, msg)
+
+from django.shortcuts import render
+
+def web_menu(request):
+    phone = request.GET.get("phone")
+    products = Product.objects.filter(active=True)
+    return render(request, "menu.html", {
+        "products": products,
+        "phone": phone
+    })

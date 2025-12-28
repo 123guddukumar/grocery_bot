@@ -1,0 +1,28 @@
+<input type="text" id="search" placeholder="Search product..." />
+
+<ul id="products">
+{% for p in products %}
+<li>
+  <b>{{ p.name }}</b> – ₹{{ p.price }}
+  <input type="number" value="1" id="q{{p.id}}" />
+  <button onclick="add('{{p.name}}', {{p.id}})">Add</button>
+</li>
+{% endfor %}
+</ul>
+
+<button onclick="send()">Place Order on WhatsApp</button>
+
+<script>
+let cart = []
+
+function add(name, id){
+  let q = document.getElementById("q"+id).value
+  cart.push(`${name} ${q}`)
+}
+
+function send(){
+  let msg = "ORDER:\n" + cart.join("\n")
+  window.location.href =
+   `https://wa.me/91XXXXXXXXXX?text=${encodeURIComponent(msg)}`
+}
+</script>
