@@ -13,7 +13,8 @@ VERIFY_TOKEN = "grocery_bot_verify_123"
 
 # Configure Gemini
 genai.configure(api_key=settings.GEMINI_API_KEY)
-gemini_model = genai.GenerativeModel('gemini-1.5-flash')  # Fast & good for Hindi
+gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+
 
 @csrf_exempt
 def webhook(request):
@@ -21,95 +22,72 @@ def webhook(request):
         mode = request.GET.get("hub.mode")
         token = request.GET.get("hub.verify_token")
         challenge = request.GET.get("hub.challenge")
-
         if mode == "subscribe" and token == VERIFY_TOKEN:
             print("Webhook verified")
             return HttpResponse(challenge)
-        return HttpResponse("Verification failed", status=403)
+        return HttpResponse("Forbidden", status=403)
 
     if request.method == "POST":
         data = json.loads(request.body)
-        print("INCOMING DATA:", json.dumps(data, indent=2))
+        print("INCOMING:", json.dumps(data, indent=2))
 
         try:
-            entry = data["entry"][0]
-            change = entry["changes"][0]
-            value = change["value"]
+            entry = data["entry"][0]["changes"][0]["value"]
 
-            if "statuses" in value:
-                return JsonResponse({"status": "status ignored"})
+            if "statuses" in entry:
+                return JsonResponse({"ok": True})
 
-            contacts = value.get("contacts", [])
-            contact = contacts[0] if contacts else {}
+            if "messages" not in entry:
+                return JsonResponse({"ok": True})
 
-            if "messages" in value:
-                msg = value["messages"][0]
-                print("FROM:", msg.get("from"))
-                print("TYPE:", msg.get("type"))
+            msg = entry["messages"][0]
+            from_phone = msg["from"]
+            msg_type = msg.get("type")
 
-                process_incoming_message(msg, contact)
+            contact = entry.get("contacts", [{}])[0]
+            process_incoming_message(msg, contact)
 
         except Exception as e:
-            print("ERROR:", str(e))
+            print("ERROR:", e)
 
-        return JsonResponse({"status": "ok"})
+        return JsonResponse({"ok": True})
 
 
 def process_incoming_message(msg, contact):
-    
     from_phone = msg['from']
     msg_type = msg.get('type')
 
     session = get_session(from_phone)
-    # 🔥 GLOBAL RESET COMMAND (ALWAYS WORKS)
-    if msg_type == 'text':
-        raw_text = msg['text']['body'].strip().lower()
-        if raw_text in ['hi', 'hello', 'start', 'menu', 'हाय', 'नमस्ते']:
-            session.state = 'menu'
-            session.cart = {}
-            session.temp_data = {}
-            session.save()
-            welcome_message(from_phone)
-            return
 
-
-    # Handle audio (voice note)
-    if msg_type == 'audio':
-        print("🎤 VOICE MESSAGE RECEIVED")
-        media_id = msg['audio']['id']
-        handle_voice_order(from_phone, media_id)
+    # Handle Voice Note
+    if msg_type == "audio":
+        audio_id = msg["audio"]["id"]
+        handle_voice_order(from_phone, audio_id)
         return
 
-    # Text or interactive
-    if msg_type == 'text':
-        text = msg['text']['body'].strip().lower()
-    elif msg_type == 'interactive':
-        if msg['interactive']['type'] == 'button_reply':
-            text = msg['interactive']['button_reply']['id']
-        elif msg['interactive']['type'] == 'list_reply':
-            text = msg['interactive']['list_reply']['id']
-        else:
-            text = ""
-    elif msg_type == 'location':
-        lat = msg['location']['latitude']
-        lng = msg['location']['longitude']
-        handle_location(from_phone, lat, lng)
-        return
-    else:
-        text = ""
+    # Handle Text or Button
+    text = ""
+    if msg_type == "text":
+        text = msg["text"]["body"].strip()
+    elif msg_type == "interactive":
+        interactive = msg["interactive"]
+        if interactive["type"] == "button_reply":
+            text = interactive["button_reply"]["id"]
+        elif interactive["type"] == "list_reply":
+            text = interactive["list_reply"]["id"]
 
     # Owner / Rider
     if from_phone == settings.OWNER_PHONE:
-        handle_owner_command(from_phone, text)
+        handle_owner_command(from_phone, text.lower())
         return
     if from_phone in settings.RIDER_PHONES:
-        handle_rider_command(from_phone, text)
+        handle_rider_command(from_phone, text.lower())
         return
 
     state = session.state
 
-    # Start / Welcome
-    if text in ['hi', 'hello', 'हाय', 'नमस्ते'] or state == 'start':
+    # Welcome
+    if text.lower() in ['hi', 'hello', 'हाय', 'नमस्ते', 'start'] or state == 'start':
         welcome_message(from_phone)
         session.state = 'menu'
         session.save()
@@ -120,60 +98,52 @@ def process_incoming_message(msg, contact):
         if text == '1':
             send_list_menu(from_phone, get_menu_categories())
             session.state = 'selecting_item'
-            session.save()
         elif text == '2':
             check_order_status(from_phone)
         elif text == '3':
-            send_text(from_phone, "हेल्प: मेनू से चुनें या वॉइस से बोलें।")
-        elif text == 'voice_order':
+            send_text(from_phone, "हेल्प: मेनू से चुनें या वॉइस से बोलकर ऑर्डर करें।")
+        elif text == '4' or 'voice' in text.lower():
             start_voice_order(from_phone)
+        session.save()
         return
 
-    # Voice/Text order flow
-    if state == 'voice_order_waiting':
-        if msg_type == 'text' and text in ['hi', 'menu', 'cancel', 'रद्द']:
-            session.state = 'menu'
-            session.save()
-            welcome_message(from_phone)
-            return
-        process_voice_text_order(from_phone, msg['text']['body'])
-        return
-
-
-    # Normal menu flow (existing)
+    # Normal Menu Flow (existing)
     if state == 'selecting_item':
-        try:
-            product = Product.objects.get(id=int(text), active=True)
-            send_product_detail(from_phone, product)
-            session.temp_data = {"awaiting_quantity_for": int(text)}
-            session.state = 'awaiting_quantity'
-            session.save()
-        except:
-            send_text(from_phone, "गलत चुनाव। दोबारा मेनू से चुनें।")
+        handle_menu_item_selection(from_phone, text)
         return
-
     if state == 'awaiting_quantity':
         add_to_cart_with_quantity(from_phone, text)
         return
-
     if state == 'adding_to_cart':
         if text == 'add_more':
             send_list_menu(from_phone, get_menu_categories())
             session.state = 'selecting_item'
-            session.save()
         elif text == 'view_cart':
             show_cart(from_phone)
+        session.save()
         return
-
     if state == 'viewing_cart':
         if text == 'confirm_order':
             confirm_order_start(from_phone)
         elif text == 'back_to_menu':
             send_list_menu(from_phone, get_menu_categories())
             session.state = 'selecting_item'
-            session.save()
+        session.save()
         return
 
+    # Voice Order Flow
+    if state == 'voice_order':
+        handle_voice_text_input(from_phone, text)
+        return
+    if state == 'voice_confirm':
+        if text == 'yes_confirm':
+            confirm_voice_cart(from_phone)
+        elif text == 'no_edit':
+            start_voice_order(from_phone, edit=True)
+        session.save()
+        return
+
+    # Personal Info
     if state == 'collecting_name':
         handle_name_input(from_phone, text.title())
         return
@@ -187,137 +157,161 @@ def process_incoming_message(msg, contact):
     session.save()
 
 
-# ---------------- VOICE ORDER FUNCTIONS ----------------
+# ==================== VOICE ORDER FEATURES ====================
 
-def welcome_message(to):
-    try:
-        body = "नमस्ते! 👋 हमारी ग्रॉसरी दुकान में स्वागत है।\n\nक्या करना चाहते हैं?"
-        buttons = [
-            {"id": "1", "title": "ग्रॉसरी मेनू"},
-            {"id": "voice_order", "title": "वॉइस ऑर्डर 🎤"},
-            {"id": "2", "title": "ऑर्डर स्टेटस"}
-        ]
-        send_reply_buttons(to, body, buttons)
-    except Exception as e:
-        send_text(to, "नमस्ते! '1' = मेनू | '2' = स्टेटस | 'voice' = वॉइस ऑर्डर")
-
-def start_voice_order(phone):
-    send_text(phone, "बताएं क्या क्या चाहिए?\nवॉइस मैसेज भेजें या टाइप करें।\nउदाहरण: 5kg चावल, 2kg टमाटर, 1 पैकेट नमक")
-    session = get_session(phone)
-    session.state = 'voice_order_waiting'
+def start_voice_order(to, edit=False):
+    msg = "फिर से बताएं क्या चाहिए?" if edit else "बताएं क्या-क्या चाहिए?\n\nवॉइस मैसेज भेजें या टाइप करें।\nउदाहरण: 5kg चावल, 2 किलो टमाटर, 1 पैकेट नमक"
+    send_text(to, msg)
+    session = get_session(to)
+    session.state = 'voice_order'
+    session.temp_data = {"voice_items": []}
     session.save()
 
 
-def handle_voice_order(phone, media_id):
+def handle_voice_order(phone, audio_id):
     # Download audio
-    url = f"https://graph.facebook.com/v20.0/{media_id}"
+    url = f"https://graph.facebook.com/v22.0/{audio_id}"
     headers = {"Authorization": f"Bearer {settings.WHATSAPP_TOKEN}"}
-    response = requests.get(url, headers=headers)
-    if response.status_code != 200:
-        send_text(phone, "वॉइस मैसेज प्रोसेस करने में दिक्कत हुई। टाइप करके बताएं।")
-        return
+    resp = requests.get(url, headers=headers)
+    audio_url = resp.json().get("url")
 
-    audio_url = response.json()['url']
-    audio_response = requests.get(audio_url, headers=headers)
-    if audio_response.status_code != 200:
-        send_text(phone, "ऑडियो डाउनलोड नहीं हुआ। फिर कोशिश करें।")
-        return
+    audio_resp = requests.get(audio_url, headers=headers)
+    with open("/tmp/audio.ogg", "wb") as f:
+        f.write(audio_resp.content)
 
-    # Upload to Gemini (as bytes)
-    audio_file = genai.upload_file(audio_response.content, mime_type="audio/ogg")
-    
-    send_text(phone, "आपका वॉइस ऑर्डर प्रोसेस हो रहा है... थोड़ा इंतज़ार करें ⏳")
-    
-    # Call Gemini
-    prompt = """
-    ये ग्रॉसरी ऑर्डर है हिंदी/हिंग्लिश में। हर आइटम को निकालो: product name और quantity.
-    उपलब्ध प्रोडक्ट्स: {products}
-    
-    आउटपुट सिर्फ JSON:
-    [
-      {{"name": "मिलान किया गया प्रोडक्ट नेम", "quantity": "2kg", "original": "tamatr 2kg"}},
-      ...
-    ]
-    अगर कोई आइटम मैच न करे तो null quantity रखो।
-    """.format(products=", ".join([p.name for p in Product.objects.filter(active=True)]))
-    
-    response = gemini_model.generate_content([audio_file, prompt])
-    try:
-        parsed = json.loads(response.text)
-        process_parsed_items(phone, parsed)
-    except:
-        send_text(phone, "वॉइस समझ नहीं आया। उदाहरण: '5 किलो चावल, 2 किलो टमाटर' बोलकर भेजें।")
+    # Transcribe with Gemini
+    sample_file = genai.upload_file(path="/tmp/audio.ogg", display_name="order")
+    response = gemini_model.generate_content(
+        [sample_file, "\n\n", "इस वॉइस मैसेज में ग्रॉसरी ऑर्डर है। क्या-क्या मांगा है? सिर्फ टेक्स्ट लौटाओ।"]
+    )
+    transcribed_text = response.text.strip()
+
+    genai.delete_file(sample_file.name)
+
+    send_text(phone, f"आपने कहा: {transcribed_text}\n\nप्रोसेस कर रहा हूँ...")
+    handle_voice_text_input(phone, transcribed_text)
 
 
-def process_voice_text_order(phone, text):
-    products_list = ", ".join([p.name for p in Product.objects.filter(active=True)])
-    prompt = f"""
-    ये ग्रॉसरी ऑर्डर है: "{text}"
-    उपलब्ध आइटम्स: {products_list}
-    
-    हर आइटम निकालो और closest match करो (typos handle करो जैसे tamatr → टमाटर)
-    
-    JSON में लौटाओ:
-    [
-      {{"matched_product": "टमाटर", "quantity": "2kg", "original": "tamatr 2kg"}},
-      {{"matched_product": null, "quantity": null, "original": "xyz"}}
-    ]
-    """
-    
-    response = gemini_model.generate_content(prompt)
-    try:
-        parsed = json.loads(response.text)
-        process_parsed_items(phone, parsed)
-    except Exception as e:
-        send_text(phone, f"समझ नहीं आया 😕\nउदाहरण: 5kg चावल, 2kg टमाटर, 1 पैकेट नमक")
-
-
-def process_parsed_items(phone, items):
+def handle_voice_text_input(phone, text):
     session = get_session(phone)
+
+    # Get all product names for context
+    products = Product.objects.filter(active=True)
+    product_list = "\n".join([f"- {p.name} (₹{p.price})" for p in products])
+
+    prompt = f"""
+आप एक ग्रॉसरी बॉट हैं। यूजर ने ये कहा: "{text}"
+
+उपलब्ध आइटम्स:
+{product_list}
+
+इसमें से हर आइटम को quantity के साथ निकालो।
+फॉर्मेट: JSON array of objects
+[
+  {{"name": "exact_product_name_from_list", "quantity": "2kg" or "1" or "500g"}}
+]
+
+अगर आइटम मैच नहीं करता तो skip करो।
+अगर थोड़ा गलत spelling है लेकिन मतलब साफ है तो closest match करो।
+उदाहरण:
+- "tamatr" → टमाटर
+- "sona mansuri" → सोना मसूरी चावल
+- "dal" → अरहर दाल (अगर सिर्फ एक दाल है)
+
+सिर्फ JSON लौटाओ, कुछ और नहीं।
+"""
+
+    try:
+        response = gemini_model.generate_content(prompt)
+        items = json.loads(response.text)
+    except Exception as e:
+        send_text(phone, "समझ नहीं पाया। कृपया दोबारा बोलें या टाइप करें।")
+        return
+
     added = []
     not_found = []
-    suggestions = []
-
     for item in items:
-        if item.get('matched_product'):
-            try:
-                product = Product.objects.get(name__iexact=item['matched_product'], active=True)
-                qty_str = item['quantity'].lower().replace('kg', '').replace('किलो', '').strip() or '1'
-                qty = Decimal(qty_str)
-                session.cart[str(product.id)] = float(qty)
-                added.append(f"✅ {product.name} - {qty}kg")
-            except:
-                not_found.append(item['original'])
-        else:
-            not_found.append(item['original'])
-            # Suggest similar
-            similar = Product.objects.filter(name__icontains=item['original'].split()[0], active=True)[:2]
-            if similar:
-                suggestions.append(f"क्या मतलब था: {', '.join([p.name for p in similar])}?")
+        try:
+            product = None
+            name_lower = item["name"].lower()
+            for p in products:
+                if name_lower in p.name.lower() or p.name.lower() in name_lower:
+                    product = p
+                    break
+            if product:
+                qty = item["quantity"].replace("किलो", "kg").replace("किग्रा", "kg")
+                qty_num = qty.replace("kg", "").replace("g", "").strip() or "1"
+                session.cart[str(product.id)] = float(qty_num)
+                added.append(f"• {product.name} - {qty}")
+            else:
+                not_found.append(item["name"])
+        except:
+            not_found.append(item["name"])
 
     session.save()
 
-    msg = "आपका ऑर्डर समझ लिया:\n\n" + "\n".join(added)
-    if not_found:
-        msg += "\n\nये आइटम नहीं मिले: " + ", ".join(not_found)
-        if suggestions:
-            msg += "\n\n" + "\n".join(suggestions)
-
+    msg = "आपका ऑर्डर समझ लिया!\n\n"
     if added:
-        buttons = [
-            {"id": "add_more", "title": "और जोड़ें"},
-            {"id": "view_cart", "title": "कार्ट देखें"}
-        ]
-        send_reply_buttons(phone, msg, buttons)
-        session.state = 'adding_to_cart'
-    else:
-        send_text(phone, msg + "\n\nदोबारा बताएं या मेनू से चुनें।")
-        welcome_message(phone)
-        session.state = 'menu'
+        msg += "जोड़े गए आइटम:\n" + "\n".join(added) + "\n\n"
+    if not_found:
+        suggestions = []
+        for nf in not_found:
+            # Simple suggestion
+            matches = [p.name for p in products if nf.lower() in p.name.lower()][:2]
+            if matches:
+                suggestions.append(f"{nf} → शायद {', '.join(matches)}?")
+        if suggestions:
+            msg += "ये आइटम नहीं मिले:\n" + "\n".join([f"- {nf}" for nf in not_found]) + "\n\nसुझाव:\n" + "\n".join(suggestions) + "\n\n"
+        else:
+            msg += "ये आइटम उपलब्ध नहीं हैं:\n" + "\n".join([f"- {nf}" for nf in not_found]) + "\n\n"
 
+    cart_text, _, _, grand = format_cart(session.cart)
+    msg += cart_text
+
+    buttons = [
+        {"id": "yes_confirm", "title": "हाँ, कन्फर्म करें"},
+        {"id": "no_edit", "title": "बदलाव करें"}
+    ]
+    send_reply_buttons(phone, msg, buttons)
+
+    session.state = 'voice_confirm'
     session.save()
 
 
+def confirm_voice_cart(phone):
+    session = get_session(phone)
+    show_cart(phone)  # reuse normal cart view
+    session.state = 'viewing_cart'
+    session.save()
+
+
+# ==================== REST SAME AS BEFORE ====================
+
+def welcome_message(to):
+    body = "नमस्ते! स्वागत है हमारी ग्रॉसरी दुकान में 🛒\n\nक्या करें?"
+    buttons = [
+        {"id": "1", "title": "मेनू देखें"},
+        {"id": "2", "title": "ऑर्डर स्टेटस"},
+        {"id": "3", "title": "हेल्प"},
+        {"id": "4", "title": "वॉइस से ऑर्डर 🎤"}
+    ]
+    send_reply_buttons(to, body, buttons)
+
+
+def handle_menu_item_selection(to, product_id):
+    try:
+        product = Product.objects.get(id=product_id, active=True)
+        send_product_detail(to, product)
+
+        session = get_session(to)
+        session.state = 'awaiting_quantity'
+        session.temp_data = {"awaiting_quantity_for": product_id}
+        session.save()
+
+    except Product.DoesNotExist:
+        send_text(to, "गलत आइटम। मेनू से चुनें।")
+        send_list_menu(to, get_menu_categories())
+        
 def send_product_detail(to, product):
     caption = f"{product.name}\n₹{product.price} per kg\n\nकितनी क्वांटिटी चाहिए?\nउदाहरण: 2kg या 1"
     if product.image_url:
