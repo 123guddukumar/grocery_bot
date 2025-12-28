@@ -2,17 +2,19 @@ from django.conf import settings
 import requests
 import json
 
-GRAPH_VERSION = "v19.0"   # Stable
+# ---------------- CONFIG ----------------
+GRAPH_VERSION = "v22.0"  # Stable
 BASE_URL = f"https://graph.facebook.com/{GRAPH_VERSION}/{settings.PHONE_NUMBER_ID}"
 
+HEADERS = {
+    "Authorization": f"Bearer {settings.WHATSAPP_TOKEN}",
+    "Content-Type": "application/json"
+}
 
+
+# ---------------- CORE SEND FUNCTION ----------------
 def send_message(to: str, msg_type: str, data: dict):
     url = f"{BASE_URL}/messages"
-
-    headers = {
-        "Authorization": f"Bearer {settings.WHATSAPP_TOKEN}",
-        "Content-Type": "application/json"
-    }
 
     payload = {
         "messaging_product": "whatsapp",
@@ -22,12 +24,12 @@ def send_message(to: str, msg_type: str, data: dict):
     }
 
     # 🔥 DEBUG LOGS (VERY IMPORTANT)
-    print("📤 SENDING MESSAGE")
+    print("\n📤 SENDING MESSAGE")
     print("➡️ TO:", to)
     print("➡️ TYPE:", msg_type)
     print("📦 PAYLOAD:", json.dumps(payload, indent=2))
 
-    response = requests.post(url, headers=headers, json=payload)
+    response = requests.post(url, headers=HEADERS, json=payload)
 
     print("📨 META STATUS:", response.status_code)
     print("📨 META RESPONSE:", response.text)
@@ -35,7 +37,7 @@ def send_message(to: str, msg_type: str, data: dict):
     return response
 
 
-# ---------------- TEXT ----------------
+# ---------------- TEXT MESSAGE ----------------
 def send_text(to: str, text: str):
     return send_message(
         to,
@@ -48,7 +50,7 @@ def send_text(to: str, text: str):
     )
 
 
-# ---------------- BUTTONS ----------------
+# ---------------- REPLY BUTTONS ----------------
 def send_reply_buttons(to: str, body: str, buttons: list):
     btns = [
         {
@@ -89,18 +91,18 @@ def send_list_menu(to: str, categories):
 
             rows.append({
                 "id": str(p.id),
-                "title": p.name[:24],          # WhatsApp limit
+                "title": p.name[:24],       # WhatsApp limit
                 "description": desc[:72]
             })
 
         if rows:
             sections.append({
                 "title": cat_name[:24],
-                "rows": rows[:10]              # Max 10 rows per section
+                "rows": rows[:10]           # Max 10 rows
             })
 
     if not sections:
-        return send_text(to, "मेनू में अभी कोई आइटम उपलब्ध नहीं है। 🙏")
+        return send_text(to, "मेनू में अभी कोई आइटम उपलब्ध नहीं है 🙏")
 
     return send_message(
         to,
