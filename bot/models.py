@@ -6,6 +6,7 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     category = models.CharField(max_length=100, blank=True)
     active = models.BooleanField(default=True)
+    image_url = models.URLField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.name} - ₹{self.price}"
@@ -53,6 +54,7 @@ class OrderItem(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
 
 class UserSession(models.Model):
+    temp_data = models.JSONField(default=dict)  # Add this line
     phone = models.CharField(max_length=20, unique=True)
     state = models.CharField(max_length=50, default='start')  # start, menu, cart, name, address, location
     cart = models.JSONField(default=dict)  # {product_id: quantity}

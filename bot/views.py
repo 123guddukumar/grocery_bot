@@ -1,5 +1,5 @@
 import json
-import requests
+from decimal import Decimal
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
@@ -7,37 +7,30 @@ from .models import *
 from .utils import *
 from .messages import *
 
-
-VERIFY_TOKEN = "grocery_bot_verify_123"   # same token jo Meta me dala
+VERIFY_TOKEN = "grocery_bot_verify_123"
 
 
 @csrf_exempt
 def webhook(request):
-
-    # ---------------- META VERIFY (GET) ----------------
     if request.method == "GET":
         mode = request.GET.get("hub.mode")
         token = request.GET.get("hub.verify_token")
         challenge = request.GET.get("hub.challenge")
 
         if mode == "subscribe" and token == VERIFY_TOKEN:
-            print("✅ Webhook verified")
+            print("Webhook verified")
             return HttpResponse(challenge)
-
         return HttpResponse("Verification failed", status=403)
 
-    # ---------------- MESSAGE RECEIVE (POST) ----------------
-    # ---------------- MESSAGE RECEIVE (POST) ----------------
     if request.method == "POST":
         data = json.loads(request.body)
-        print("📩 INCOMING DATA:", json.dumps(data, indent=2))
+        print("INCOMING DATA:", json.dumps(data, indent=2))
 
         try:
             entry = data["entry"][0]
             change = entry["changes"][0]
             value = change["value"]
 
-            # 🚫 Ignore delivery/read status callbacks
             if "statuses" in value:
                 return JsonResponse({"status": "status ignored"})
 
@@ -46,25 +39,20 @@ def webhook(request):
 
             if "messages" in value:
                 msg = value["messages"][0]
+                print("FROM:", msg.get("from"))
+                print("TYPE:", msg.get("type"))
 
-                print("📞 FROM:", msg.get("from"))
-                print("💬 TYPE:", msg.get("type"))
-
-                # 🔥 REAL FLOW STARTS HERE
                 process_incoming_message(msg, contact)
 
         except Exception as e:
-            print("❌ ERROR:", str(e))
+            print("ERROR:", str(e))
 
         return JsonResponse({"status": "ok"})
-
 
 
 def process_incoming_message(msg, contact):
     from_phone = msg['from']
     msg_type = msg.get('type')
-
-    profile_name = contact.get('profile', {}).get('name', '')
 
     if msg_type == 'text':
         text = msg['text']['body'].strip().lower()
@@ -83,7 +71,7 @@ def process_incoming_message(msg, contact):
     else:
         text = ""
 
-    # Owner / Rider commands
+    # Owner / Rider
     if from_phone == settings.OWNER_PHONE:
         handle_owner_command(from_phone, text)
         return
@@ -95,38 +83,81 @@ def process_incoming_message(msg, contact):
     session = get_session(from_phone)
     state = session.state
 
+    # Start / Welcome
     if text in ['hi', 'hello', 'हाय', 'नमस्ते'] or state == 'start':
         welcome_message(from_phone)
         session.state = 'menu'
         session.save()
+        return
 
-    elif state == 'menu':
+    # Main Menu
+    if state == 'menu':
         if text == '1':
             send_list_menu(from_phone, get_menu_categories())
-            session.state = 'adding_to_cart'
+            session.state = 'selecting_item'
             session.save()
         elif text == '2':
             check_order_status(from_phone)
         elif text == '3':
-            send_text(from_phone, "हेल्प: बस नंबर टाइप करें। उदाहरण:\n1 2kg → 2kg आइटम नंबर 1\n'कार्ट' देखने के लिए\n'कन्फर्म' ऑर्डर के लिए")
+            send_text(from_phone, "हेल्प: मेनू से आइटम चुनें → क्वांटिटी टाइप करें → कार्ट में जोड़ें → कन्फर्म करें।")
+        return
 
-    elif state == 'adding_to_cart':
-        if text == 'कार्ट':
+    # Selecting item from list menu
+    if state == 'selecting_item':
+        try:
+            product = Product.objects.get(id=int(text), active=True)
+            send_product_detail(from_phone, product)
+            session.temp_data = {"awaiting_quantity_for": int(text)}
+            session.state = 'awaiting_quantity'
+            session.save()
+        except:
+            send_text(from_phone, "गलत चुनाव। कृपया मेनू से दोबारा चुनें।")
+            welcome_message(from_phone)  # fallback
+        return
+
+    # Waiting for quantity after item selection
+    if state == 'awaiting_quantity':
+        add_to_cart_with_quantity(from_phone, text)
+        return
+
+    # After adding items – button actions
+    if state == 'adding_to_cart':
+        if text == 'add_more':
+            send_list_menu(from_phone, get_menu_categories())
+            session.state = 'selecting_item'
+            session.save()
+        elif text == 'view_cart':
             show_cart(from_phone)
-        elif text == 'कन्फर्म':
-            confirm_order_start(from_phone)
-        else:
-            add_to_cart(from_phone, text)
+        return
 
-    elif state == 'collecting_name':
+    # Cart shown – confirm or back
+    if state == 'viewing_cart':
+        if text == 'confirm_order':
+            confirm_order_start(from_phone)
+        elif text == 'back_to_menu':
+            send_list_menu(from_phone, get_menu_categories())
+            session.state = 'selecting_item'
+            session.save()
+        return
+
+    # Personal details
+    if state == 'collecting_name':
         handle_name_input(from_phone, text.title())
-    elif state == 'collecting_address':
+        return
+    if state == 'collecting_address':
         handle_address_input(from_phone, text)
-    else:
-        welcome_message(from_phone)
+        return
+
+    # Fallback
+    welcome_message(from_phone)
+    session.state = 'menu'
+    session.save()
+
+
+# ---------------- MESSAGES & ACTIONS ----------------
 
 def welcome_message(to):
-    body = "नमस्ते! 👋 हमारी ग्रॉसरी दुकान में आपका स्वागत है।\n\nक्या करें?"
+    body = "नमस्ते! हमारी ग्रॉसरी दुकान में आपका स्वागत है।\n\nक्या करना चाहेंगे?"
     buttons = [
         {"id": "1", "title": "ग्रॉसरी मेनू"},
         {"id": "2", "title": "ऑर्डर स्टेटस"},
@@ -134,34 +165,66 @@ def welcome_message(to):
     ]
     send_reply_buttons(to, body, buttons)
 
-def add_to_cart(phone, text):
-    session = get_session(phone)
-    try:
-        parts = text.split()
-        item_id = int(parts[0])
-        quantity = parts[1] if len(parts) > 1 else "1kg"
-        quantity = quantity.replace('kg', '').strip()
-        qty = Decimal(quantity)
 
-        product = Product.objects.get(id=item_id, active=True)
-        session.cart[str(item_id)] = float(qty)
+def send_product_detail(to, product):
+    caption = f"{product.name}\n₹{product.price} per kg\n\nकितनी क्वांटिटी चाहिए?\nउदाहरण: 2kg या 1"
+    if product.image_url:
+        send_message(to, "image", {"image": {"link": product.image_url, "caption": caption}})
+    else:
+        send_text(to, caption)
+
+
+def add_to_cart_with_quantity(phone, quantity_text):
+    session = get_session(phone)
+    product_id = session.temp_data.get("awaiting_quantity_for")
+    if not product_id:
+        send_text(phone, "कुछ गड़बड़ हुई। कृपया दोबारा मेनू से शुरू करें।")
+        welcome_message(phone)
+        return
+
+    try:
+        qty_str = quantity_text.strip().lower().replace('kg', '').replace('किग्रा', '').strip()
+        qty = Decimal(qty_str or "1")
+
+        product = Product.objects.get(id=product_id, active=True)
+        session.cart[str(product_id)] = float(qty)
         session.save()
 
-        send_text(phone, f"✅ {product.name} - {qty}kg कार्ट में जोड़ा गया!\n\nऔर जोड़ें या 'कार्ट' टाइप करें।")
+        body = f"{product.name} - {qty}kg कार्ट में जोड़ा गया!"
+        buttons = [
+            {"id": "add_more", "title": "और जोड़ें"},
+            {"id": "view_cart", "title": "कार्ट देखें"}
+        ]
+        send_reply_buttons(phone, body, buttons)
+
+        session.state = 'adding_to_cart'
+        session.temp_data = {}
+        session.save()
+
     except:
-        send_text(phone, "गलत इनपुट 😕\nउदाहरण: 1 2kg\nया 'कार्ट' देखने के लिए")
+        send_text(phone, "गलत क्वांटिटी। उदाहरण: 2kg या 1.5")
+
 
 def show_cart(phone):
     session = get_session(phone)
     if not session.cart:
         send_text(phone, "कार्ट खाली है। मेनू से आइटम चुनें।")
+        welcome_message(phone)
+        session.state = 'menu'
+        session.save()
         return
 
     cart_text, item_total, delivery, grand = format_cart(session.cart)
-    cart_text += "\n\nकन्फर्म करने के लिए 'कन्फर्म' टाइप करें"
-    send_text(phone, cart_text)
-    session.state = 'adding_to_cart'
+
+    buttons = [
+        {"id": "confirm_order", "title": "ऑर्डर कन्फर्म करें"},
+        {"id": "back_to_menu", "title": "मेनू में वापस"}
+    ]
+    send_reply_buttons(phone, cart_text, buttons)
+
+    session.state = 'viewing_cart'
     session.save()
+
 
 def confirm_order_start(phone):
     session = get_session(phone)
