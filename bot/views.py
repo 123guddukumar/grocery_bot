@@ -56,13 +56,26 @@ def webhook(request):
 
 
 def process_incoming_message(msg, contact):
+    
     from_phone = msg['from']
     msg_type = msg.get('type')
 
     session = get_session(from_phone)
+    # 🔥 GLOBAL RESET COMMAND (ALWAYS WORKS)
+    if msg_type == 'text':
+        raw_text = msg['text']['body'].strip().lower()
+        if raw_text in ['hi', 'hello', 'start', 'menu', 'हाय', 'नमस्ते']:
+            session.state = 'menu'
+            session.cart = {}
+            session.temp_data = {}
+            session.save()
+            welcome_message(from_phone)
+            return
+
 
     # Handle audio (voice note)
     if msg_type == 'audio':
+        print("🎤 VOICE MESSAGE RECEIVED")
         media_id = msg['audio']['id']
         handle_voice_order(from_phone, media_id)
         return
@@ -118,8 +131,14 @@ def process_incoming_message(msg, contact):
 
     # Voice/Text order flow
     if state == 'voice_order_waiting':
+        if msg_type == 'text' and text in ['hi', 'menu', 'cancel', 'रद्द']:
+            session.state = 'menu'
+            session.save()
+            welcome_message(from_phone)
+            return
         process_voice_text_order(from_phone, msg['text']['body'])
         return
+
 
     # Normal menu flow (existing)
     if state == 'selecting_item':
