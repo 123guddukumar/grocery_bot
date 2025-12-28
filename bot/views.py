@@ -190,14 +190,8 @@ def process_incoming_message(msg, contact):
 # ---------------- VOICE ORDER FUNCTIONS ----------------
 
 def welcome_message(to):
-    body = "नमस्ते! 👋 हमारी ग्रॉसरी दुकान में स्वागत है।\n\nक्या करना चाहते हैं?"
-    buttons = [
-        {"id": "1", "title": "ग्रॉसरी मेनू देखें"},
-        {"id": "voice_order", "title": "वॉइस से ऑर्डर 🎤"},
-        {"id": "2", "title": "ऑर्डर स्टेटस"},
-        {"id": "3", "title": "हेल्प"}
-    ]
-    send_reply_buttons(to, body, buttons)
+    send_text(to, "✅ HI RECEIVED — BOT ALIVE")
+
 
 
 def start_voice_order(phone):
