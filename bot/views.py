@@ -9,6 +9,7 @@ from .messages import *
 
 @csrf_exempt
 def webhook(request):
+    print("🔥 WEBHOOK HIT", request.method)
     if request.method == 'GET':
         # Verification
         mode = request.GET.get('hub.mode')
