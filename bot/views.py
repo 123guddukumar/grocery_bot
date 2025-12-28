@@ -68,29 +68,34 @@ def process_incoming_message(msg, contact):
     # Handle Text or Button
     text = ""
     if msg_type == "text":
-        text = msg["text"]["body"].strip()
+        text = msg["text"]["body"].strip().lower()
     elif msg_type == "interactive":
         interactive = msg["interactive"]
         if interactive["type"] == "button_reply":
-            text = interactive["button_reply"]["id"]
+            text = interactive["button_reply"]["id"].lower()
         elif interactive["type"] == "list_reply":
-            text = interactive["list_reply"]["id"]
+            text = interactive["list_reply"]["id"].lower()
 
     # Owner / Rider
     if from_phone == settings.OWNER_PHONE:
-        handle_owner_command(from_phone, text.lower())
+        handle_owner_command(from_phone, text)
         return
     if from_phone in settings.RIDER_PHONES:
-        handle_rider_command(from_phone, text.lower())
+        handle_rider_command(from_phone, text)
         return
 
     state = session.state
 
     # Welcome
-    if text.lower() in ['hi', 'hello', 'हाय', 'नमस्ते', 'start'] or state == 'start':
+    if text in ['hi', 'hello', 'हाय', 'नमस्ते', 'start'] or state == 'start':
         welcome_message(from_phone)
         session.state = 'menu'
         session.save()
+        return
+
+    # Trigger Voice by text command
+    if 'voice' in text or 'वॉइस' in text or text == '4':
+        start_voice_order(from_phone)
         return
 
     # Main Menu
@@ -101,13 +106,11 @@ def process_incoming_message(msg, contact):
         elif text == '2':
             check_order_status(from_phone)
         elif text == '3':
-            send_text(from_phone, "हेल्प: मेनू से चुनें या वॉइस से बोलकर ऑर्डर करें।")
-        elif text == '4' or 'voice' in text.lower():
-            start_voice_order(from_phone)
+            send_text(from_phone, "हेल्प: मेनू से चुनें या 'वॉइस' टाइप करके बोलकर ऑर्डर करें।")
         session.save()
         return
 
-    # Normal Menu Flow (existing)
+    # Normal Menu Flow
     if state == 'selecting_item':
         handle_menu_item_selection(from_phone, text)
         return
@@ -131,9 +134,9 @@ def process_incoming_message(msg, contact):
         session.save()
         return
 
-    # Voice Order Flow
+    # Voice Flow
     if state == 'voice_order':
-        handle_voice_text_input(from_phone, text)
+        handle_voice_text_input(from_phone, text.upper())  # Case insensitive
         return
     if state == 'voice_confirm':
         if text == 'yes_confirm':
@@ -157,7 +160,7 @@ def process_incoming_message(msg, contact):
     session.save()
 
 
-# ==================== VOICE ORDER FEATURES ====================
+# ==================== VOICE ORDER ====================
 
 def start_voice_order(to, edit=False):
     msg = "फिर से बताएं क्या चाहिए?" if edit else "बताएं क्या-क्या चाहिए?\n\nवॉइस मैसेज भेजें या टाइप करें।\nउदाहरण: 5kg चावल, 2 किलो टमाटर, 1 पैकेट नमक"
@@ -285,33 +288,35 @@ def confirm_voice_cart(phone):
     session.save()
 
 
-# ==================== REST SAME AS BEFORE ====================
+# ==================== WELCOME FIX (3 BUTTONS) ====================
 
 def welcome_message(to):
-    body = "नमस्ते! स्वागत है हमारी ग्रॉसरी दुकान में 🛒\n\nक्या करें?"
+    body = "नमस्ते! स्वागत है हमारी ग्रॉसरी दुकान में 🛒\n\nक्या करें?\n\n'वॉइस' टाइप करके बोलकर ऑर्डर कर सकते हैं।"
     buttons = [
         {"id": "1", "title": "मेनू देखें"},
         {"id": "2", "title": "ऑर्डर स्टेटस"},
-        {"id": "3", "title": "हेल्प"},
-        {"id": "4", "title": "वॉइस से ऑर्डर 🎤"}
+        {"id": "3", "title": "हेल्प"}
     ]
     send_reply_buttons(to, body, buttons)
 
 
-def handle_menu_item_selection(to, product_id):
+# ==================== NORMAL MENU FLOW ====================
+
+def handle_menu_item_selection(phone, text):
     try:
-        product = Product.objects.get(id=product_id, active=True)
-        send_product_detail(to, product)
-
-        session = get_session(to)
+        product = Product.objects.get(id=int(text), active=True)
+        send_product_detail(phone, product)
+        session = get_session(phone)
+        session.temp_data = {"awaiting_quantity_for": int(text)}
         session.state = 'awaiting_quantity'
-        session.temp_data = {"awaiting_quantity_for": product_id}
         session.save()
+    except:
+        send_text(phone, "गलत चुनाव। कृपया मेनू से दोबारा चुनें।")
+        welcome_message(phone)
 
-    except Product.DoesNotExist:
-        send_text(to, "गलत आइटम। मेनू से चुनें।")
-        send_list_menu(to, get_menu_categories())
-        
+
+
+
 def send_product_detail(to, product):
     caption = f"{product.name}\n₹{product.price} per kg\n\nकितनी क्वांटिटी चाहिए?\nउदाहरण: 2kg या 1"
     if product.image_url:
