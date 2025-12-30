@@ -155,14 +155,24 @@ def process_incoming_message(msg, contact):
         return
 
     # Cart shown – confirm or back
-    if state == 'viewing_cart':
-        if text == 'confirm_order':
-            confirm_order_start(from_phone)
-        elif text == 'back_to_menu':
-            send_list_menu(from_phone, get_menu_categories())
-            session.state = 'selecting_item'
-            session.save()
+    if text == 'confirm_order':
+        confirm_order_start(from_phone)
         return
+
+    elif text in ['back_to_menu', 'add_more']:
+        send_list_menu(from_phone, get_menu_categories())
+        session.state = 'selecting_item'
+        session.save()
+        return
+
+    elif text == 'web_add_more':
+        web_url = f"https://grocery-bot-nffi.onrender.com/menu?phone={from_phone}"
+        send_text(
+            from_phone,
+            f"🛒 और आइटम जोड़ने के लिए नीचे लिंक खोलें 👇\n{web_url}"
+        )
+        return
+
 
     # Personal details
     if state == 'collecting_name':
@@ -440,13 +450,18 @@ def web_order(request):
     session.state = "viewing_cart"
     session.save()
 
+
     cart_text, _, _, _ = format_cart(session.cart)
 
-    send_text(
+    send_reply_buttons(
         phone,
-        "🛒 Web Order Received!\n\n" + cart_text +
-        "\n\nWhatsApp par *CONFIRM* likhkar order finalize karein"
+        "🛒 आपका कार्ट तैयार है (Web Order)\n\n" + cart_text,
+        [
+            {"id": "web_add_more", "title": "➕ और जोड़ें"},
+            {"id": "confirm_order", "title": "✅ ऑर्डर कन्फर्म करें"}
+        ]
     )
+
 
     return JsonResponse({
         "message": "Order WhatsApp pe bhej diya gaya ✅"
