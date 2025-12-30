@@ -495,40 +495,40 @@ function dec(id){
 
 function addToCart(name, id){
   let q = parseInt(document.getElementById("q"+id).value);
-  const card = document.querySelector(`[onclick="addToCart('${name}', ${id})"]`).closest('.card');
-  
-  if(cart[name]){
-    cart[name] += q;
+
+  if(cart[id]){
+    cart[id].qty += q;
   } else {
-    cart[name] = q;
+    cart[id] = {
+      name: name,
+      price: prices[name],
+      qty: q
+    };
   }
-  
-  // Add animation to card
-  card.classList.add('card-added');
-  setTimeout(() => {
-    card.classList.remove('card-added');
-  }, 400);
-  
+
   updateCartDisplay();
-  
-  // Show notification
   showNotification(`Added: ${name} x ${q}`);
 }
 
-function updateCartDisplay() {
-  const itemCount = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
-  const total = Object.entries(cart).reduce((sum, [name, qty]) => {
-    return sum + (prices[name] || 0) * qty;
-  }, 0);
 
-  document.getElementById('cartCount').textContent =
+function updateCartDisplay() {
+  let itemCount = 0;
+  let total = 0;
+
+  Object.values(cart).forEach(item => {
+    itemCount += item.qty;
+    total += item.price * item.qty;
+  });
+
+  document.getElementById("cartCount").textContent =
     `${itemCount} ${itemCount === 1 ? 'item' : 'items'}`;
-  document.getElementById('cartTotal').textContent =
+
+  document.getElementById("cartTotal").textContent =
     `₹${total.toFixed(2)}`;
 
-  // 🔥 persist cart
   localStorage.setItem("cart", JSON.stringify(cart));
 }
+
 
 function showNotification(message) {
   // Create notification element
@@ -617,43 +617,43 @@ function goWhatsApp(){
 
 function send(){
   if(Object.keys(cart).length === 0){
-    showNotification("Your cart is empty. Add some items first!");
+    showNotification("Cart empty hai ❌");
     return;
   }
 
-  // Show loading state
-  const btn = document.querySelector('.place-btn');
-  const originalText = btn.innerHTML;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-  btn.classList.add('loading');
-  
+  let msg = "🛒 *New Order*%0A%0A";
+  let total = 0;
+
+  Object.values(cart).forEach(item=>{
+    let sub = item.price * item.qty;
+    total += sub;
+    msg += `• ${item.name} x ${item.qty} = ₹${sub}%0A`;
+  });
+
+  msg += `%0A*Total: ₹${total}*%0A`;
+  msg += `%0AType *CONFIRM* to place order`;
+
+  // OPTIONAL: backend save
   fetch("/api/web-order/",{
     method:"POST",
-    headers:{
-      "Content-Type":"application/json"
-    },
+    headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({
       phone: "{{ phone }}",
-      cart: cart
+      cart: cart,
+      total: total
     })
-  })
-  .then(r=>r.json())
-  .then(d=>{
-    showNotification(d.message || "Order placed successfully!");
-    // Clear cart after successful order
-    cart = {};
-    updateCartDisplay();
-  })
-  .catch(error => {
-    showNotification("Error placing order. Please try again.");
-    console.error('Error:', error);
-  })
-  .finally(() => {
-    // Reset button
-    btn.innerHTML = originalText;
-    btn.classList.remove('loading');
   });
+
+  // 🔥 WhatsApp redirect
+  window.location.href =
+    `https://wa.me/15556414417?text=${msg}`;
+
+  // clear cart
+  cart = {};
+  localStorage.removeItem("cart");
+  updateCartDisplay();
 }
+
 
 function filter(){
   let v = document.getElementById("search").value.toLowerCase().trim();
