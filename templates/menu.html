@@ -117,9 +117,18 @@ header {
 <div class="card" data-name="{{ p.name|lower }}">
   <b>{{ p.name }}</b>
   <div class="price">₹{{ p.price }}</div>
-  <input type="number" min="1" value="1" id="q{{p.id}}" class="qty">
-  <button class="add-btn" onclick="add('{{p.name}}', {{p.id}})">Add</button>
+
+  <div style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">
+    <button onclick="dec({{p.id}})">➖</button>
+    <input type="number" min="1" value="1" id="q{{p.id}}" class="qty">
+    <button onclick="inc({{p.id}})">➕</button>
+  </div>
+
+  <button class="add-btn" onclick="add('{{p.name}}', {{p.id}})">
+    Add to Cart
+  </button>
 </div>
+
 {% endfor %}
 
 </div>
@@ -130,21 +139,40 @@ header {
 </div>
 
 <script>
-let cart = []
+let cart = {}
+
+function inc(id){
+  let q = document.getElementById("q"+id)
+  q.value = parseInt(q.value || 1) + 1
+}
+
+function dec(id){
+  let q = document.getElementById("q"+id)
+  if(q.value > 1) q.value--
+}
 
 function add(name, id){
-  let q = document.getElementById("q"+id).value
-  cart.push(`${name} x ${q}`)
-  alert(name + " added")
+  let q = parseInt(document.getElementById("q"+id).value)
+
+  if(cart[name]){
+    cart[name] += q
+  } else {
+    cart[name] = q
+  }
+
+  alert(`Added: ${name} x ${q}`)
 }
 
 function send(){
-  if(cart.length === 0){
+  if(Object.keys(cart).length === 0){
     alert("Cart empty!")
     return
   }
 
-  let msg = "🛒 NEW ORDER\n\n" + cart.join("\n")
+  let msg = "🛒 NEW ORDER\n\n"
+  for(let k in cart){
+    msg += `${k} x ${cart[k]}\n`
+  }
 
   window.location.href =
    `https://wa.me/918084661813?text=${encodeURIComponent(msg)}`
@@ -157,6 +185,7 @@ function filter(){
   })
 }
 </script>
+
 
 </body>
 </html>
