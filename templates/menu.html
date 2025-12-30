@@ -472,7 +472,7 @@ header i {
 </div>
 
 <script>
-let cart = {};
+let cart = JSON.parse(localStorage.getItem("cart")) || {};
 let prices = {}; // Store product prices for calculating totals
 
 // Initialize prices from the product cards
@@ -516,14 +516,18 @@ function addToCart(name, id){
 }
 
 function updateCartDisplay() {
-  // Update cart count and total
   const itemCount = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
   const total = Object.entries(cart).reduce((sum, [name, qty]) => {
     return sum + (prices[name] || 0) * qty;
   }, 0);
-  
-  document.getElementById('cartCount').textContent = `${itemCount} ${itemCount === 1 ? 'item' : 'items'}`;
-  document.getElementById('cartTotal').textContent = `₹${total.toFixed(2)}`;
+
+  document.getElementById('cartCount').textContent =
+    `${itemCount} ${itemCount === 1 ? 'item' : 'items'}`;
+  document.getElementById('cartTotal').textContent =
+    `₹${total.toFixed(2)}`;
+
+  // 🔥 persist cart
+  localStorage.setItem("cart", JSON.stringify(cart));
 }
 
 function showNotification(message) {
@@ -588,9 +592,28 @@ async function add(productId){
 }
 
 function goWhatsApp(){
+  if(Object.keys(cart).length === 0){
+    showNotification("Cart empty hai ❌");
+    return;
+  }
+
+  let msg = "🛒 *New Order*%0A%0A";
+  let total = 0;
+
+  Object.entries(cart).forEach(([name, qty])=>{
+    let price = prices[name] || 0;
+    let sub = price * qty;
+    total += sub;
+    msg += `• ${name} x ${qty} = ₹${sub}%0A`;
+  });
+
+  msg += `%0A*Total: ₹${total}*%0A`;
+  msg += `%0AType *CONFIRM* to place order`;
+
   window.location.href =
-    "https://wa.me/15556414417?text=cart"
+    `https://wa.me/15556414417?text=${msg}`;
 }
+
 
 function send(){
   if(Object.keys(cart).length === 0){
