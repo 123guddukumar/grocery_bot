@@ -165,17 +165,24 @@ function add(name, id){
 
 function send(){
   if(Object.keys(cart).length === 0){
-    alert("Cart empty!")
+    alert("Cart empty")
     return
   }
 
-  let msg = "🛒 NEW ORDER\n\n"
-  for(let k in cart){
-    msg += `${k} x ${cart[k]}\n`
-  }
-
-  window.location.href =
-   `https://wa.me/918084661813?text=${encodeURIComponent(msg)}`
+  fetch("/api/web-order/",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json"
+    },
+    body: JSON.stringify({
+      phone: "{{ phone }}",
+      cart: cart
+    })
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    alert(d.message)
+  })
 }
 
 function filter(){

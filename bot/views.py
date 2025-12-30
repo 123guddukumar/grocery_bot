@@ -419,3 +419,35 @@ def web_menu(request):
         "products": products,
         "phone": phone
     })
+
+@csrf_exempt
+def web_order(request):
+    data = json.loads(request.body)
+
+    phone = data["phone"]
+    cart = data["cart"]
+
+    session = get_session(phone)
+    session.cart = {}
+
+    for name, qty in cart.items():
+        try:
+            product = Product.objects.get(name=name, active=True)
+            session.cart[str(product.id)] = qty
+        except:
+            pass
+
+    session.state = "viewing_cart"
+    session.save()
+
+    cart_text, _, _, _ = format_cart(session.cart)
+
+    send_text(
+        phone,
+        "🛒 Web Order Received!\n\n" + cart_text +
+        "\n\nWhatsApp par *CONFIRM* likhkar order finalize karein"
+    )
+
+    return JsonResponse({
+        "message": "Order WhatsApp pe bhej diya gaya ✅"
+    })
