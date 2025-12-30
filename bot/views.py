@@ -466,3 +466,26 @@ def web_order(request):
     return JsonResponse({
         "message": "Order WhatsApp pe bhej diya gaya ✅"
     })
+
+from django.views.decorators.http import require_POST
+
+@csrf_exempt
+@require_POST
+def web_add_to_cart(request):
+    data = json.loads(request.body)
+    phone = data.get("phone")
+    product_id = str(data.get("product_id"))
+    qty = float(data.get("qty", 1))
+
+    session = get_session(phone)
+
+    # 🔥 IMPORTANT: merge cart (overwrite nahi)
+    cart = session.cart or {}
+    cart[product_id] = cart.get(product_id, 0) + qty
+    session.cart = cart
+    session.save()
+
+    return JsonResponse({
+        "status": "ok",
+        "cart": cart
+    })
