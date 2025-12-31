@@ -60,9 +60,3 @@ class UserSession(models.Model):
     cart = models.JSONField(default=dict)  # {product_id: quantity}
     current_order = models.ForeignKey(Order, null=True, blank=True, on_delete=models.SET_NULL)
     
-class WebCart(models.Model):
-    phone = models.CharField(max_length=15)
-    item_name = models.CharField(max_length=100)
-    qty = models.IntegerField()
-    price = models.IntegerField()
-    added_at = models.DateTimeField(auto_now_add=True)
