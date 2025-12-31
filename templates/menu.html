@@ -151,24 +151,23 @@ function dec(id){
   if(q.value > 1) q.value--
 }
 
+let cart = JSON.parse(localStorage.getItem("cart")) || {}
+
 function add(name, id){
   let q = parseInt(document.getElementById("q"+id).value)
 
-  fetch("/api/cart/add/",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      phone: "{{ phone }}",
-      name: name,
-      qty: q
-    })
-  })
-  .then(r=>r.json())
-  .then(d=>{
-    alert("Added to cart")
-  })
-}
+  // ✅ JS cart update
+  if(cart[name]){
+    cart[name] += q
+  } else {
+    cart[name] = q
+  }
 
+  // ✅ save to localStorage
+  localStorage.setItem("cart", JSON.stringify(cart))
+
+  alert(`${name} x ${q} added`)
+}
 function send(){
   if(Object.keys(cart).length === 0){
     alert("Cart empty")
