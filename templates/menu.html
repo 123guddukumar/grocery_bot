@@ -139,7 +139,7 @@ header {
 </div>
 
 <script>
-let cart = {}
+let cart = JSON.parse(localStorage.getItem("cart")) || {}
 
 function inc(id){
   let q = document.getElementById("q"+id)
@@ -159,6 +159,8 @@ function add(name, id){
   } else {
     cart[name] = q
   }
+
+  localStorage.setItem("cart", JSON.stringify(cart))
 
   alert(`Added: ${name} x ${q}`)
 }
@@ -182,8 +184,13 @@ function send(){
   .then(r=>r.json())
   .then(d=>{
     alert(d.message)
+
+    // ✅ Clear cart after order
+    localStorage.removeItem("cart")
+    cart = {}
   })
 }
+
 
 function filter(){
   let v = document.getElementById("search").value.toLowerCase()
