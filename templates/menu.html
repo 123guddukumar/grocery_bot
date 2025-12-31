@@ -139,18 +139,22 @@ header {
 </div>
 
 <script>
-let cart = JSON.parse(localStorage.getItem("cart")) || {}
+const CART_KEY = "cart_{{ phone }}";   // 🔥 phone based cart
+let cart = JSON.parse(localStorage.getItem(CART_KEY)) || {}
 
+// ➕ quantity increase
 function inc(id){
   let q = document.getElementById("q"+id)
   q.value = parseInt(q.value || 1) + 1
 }
 
+// ➖ quantity decrease
 function dec(id){
   let q = document.getElementById("q"+id)
   if(q.value > 1) q.value--
 }
 
+// 🛒 add item
 function add(name, id){
   let q = parseInt(document.getElementById("q"+id).value)
 
@@ -160,11 +164,12 @@ function add(name, id){
     cart[name] = q
   }
 
-  localStorage.setItem("cart", JSON.stringify(cart))
+  localStorage.setItem(CART_KEY, JSON.stringify(cart))
 
   alert(`Added: ${name} x ${q}`)
 }
 
+// 📦 place order
 function send(){
   if(Object.keys(cart).length === 0){
     alert("Cart empty")
@@ -184,9 +189,14 @@ function send(){
   .then(r=>r.json())
   .then(d=>{
     alert(d.message)
+
+    // ✅ order ke baad cart clear
+    localStorage.removeItem(CART_KEY)
+    cart = {}
   })
 }
 
+// 🔍 search filter
 function filter(){
   let v = document.getElementById("search").value.toLowerCase()
   document.querySelectorAll(".card").forEach(c=>{
@@ -194,6 +204,7 @@ function filter(){
   })
 }
 </script>
+
 
 
 </body>

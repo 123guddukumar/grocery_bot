@@ -489,3 +489,39 @@ def web_add_to_cart(request):
         "status": "ok",
         "cart": cart
     })
+
+
+@csrf_exempt
+def add_to_cart(request):
+    data = json.loads(request.body)
+    phone = data["phone"]
+    name = data["name"]
+    qty = data["qty"]
+    price = data["price"]
+
+    item, created = WebCart.objects.get_or_create(
+        phone=phone,
+        item_name=name,
+        defaults={"qty": qty, "price": price}
+    )
+
+    if not created:
+        item.qty += qty
+        item.save()
+
+    return JsonResponse({"status": "ok"})
+
+
+def get_cart(request):
+    phone = request.GET.get("phone")
+    items = WebCart.objects.filter(phone=phone)
+
+    return JsonResponse({
+        "cart": [
+            {
+                "name": i.item_name,
+                "qty": i.qty,
+                "price": i.price
+            } for i in items
+        ]
+    })
