@@ -489,3 +489,4 @@ def web_add_to_cart(request):
         "status": "ok",
         "cart": cart
     })
+

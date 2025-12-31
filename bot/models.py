@@ -59,4 +59,3 @@ class UserSession(models.Model):
     state = models.CharField(max_length=50, default='start')  # start, menu, cart, name, address, location
     cart = models.JSONField(default=dict)  # {product_id: quantity}
     current_order = models.ForeignKey(Order, null=True, blank=True, on_delete=models.SET_NULL)
-    
