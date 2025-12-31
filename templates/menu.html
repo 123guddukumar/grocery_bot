@@ -184,13 +184,8 @@ function send(){
   .then(r=>r.json())
   .then(d=>{
     alert(d.message)
-
-    // ✅ Clear cart after order
-    localStorage.removeItem("cart")
-    cart = {}
   })
 }
-
 
 function filter(){
   let v = document.getElementById("search").value.toLowerCase()
