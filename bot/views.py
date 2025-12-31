@@ -490,3 +490,15 @@ def web_add_to_cart(request):
         "cart": cart
     })
 
+
+def check_active_order(request):
+    phone = request.GET.get("phone")
+
+    active = Order.objects.filter(
+        phone=phone,
+        status__in=["PLACED","ACCEPTED","OUT_FOR_DELIVERY"]
+    ).exists()
+
+    return JsonResponse({
+        "clear_cart": not active
+    })
