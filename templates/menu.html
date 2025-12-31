@@ -141,18 +141,6 @@ header {
 <script>
 let cart = JSON.parse(localStorage.getItem("cart")) || {}
 
-function inc(id){
-  let q = document.getElementById("q"+id)
-  q.value = parseInt(q.value || 1) + 1
-}
-
-function dec(id){
-  let q = document.getElementById("q"+id)
-  if(q.value > 1) q.value--
-}
-
-let cart = JSON.parse(localStorage.getItem("cart")) || {}
-
 function add(name, id){
   let q = parseInt(document.getElementById("q"+id).value)
 
@@ -168,6 +156,18 @@ function add(name, id){
 
   alert(`${name} x ${q} added`)
 }
+
+function inc(id){
+  let q = document.getElementById("q"+id)
+  q.value = parseInt(q.value || 1) + 1
+}
+
+function dec(id){
+  let q = document.getElementById("q"+id)
+  if(q.value > 1) q.value--
+}
+
+
 function send(){
   if(Object.keys(cart).length === 0){
     alert("Cart empty")
