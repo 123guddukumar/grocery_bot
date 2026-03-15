@@ -85,28 +85,7 @@ def process_incoming_message(msg, contact):
     state = session.state
     print(f"DEBUG: Session for {from_phone} - State: {state}")
 
-    # Start / Welcome
-    greetings = ['hi', 'hello', 'hey', 'नमस्ते', 'नमस्कार', 'हाय', 'menu', 'start']
-    is_greeting = any(word in text for word in greetings)
-    print(f"DEBUG: Message text: '{text}' - Is Greeting: {is_greeting}")
-    
-    if is_greeting or state == 'start':
-        send_reply_buttons(
-            from_phone,
-            "नमस्ते 👋\n100+ ग्रॉसरी आइटम उपलब्ध हैं 🛒",
-            [
-                {"id": "menu", "title": "🛒 WhatsApp Menu"},
-                {"id": "web_menu", "title": "🔍 Search & Order"},
-                {"id": "status", "title": "📦 Order Status"}
-            ]
-        )
-        session.state = "menu"
-        session.save()
-        return   # 🔥 IMPORTANT
-
-
-
-    # Main Menu
+    # --- 1. Specific Button / Command Actions ---
     if text == 'menu':
         send_list_menu(from_phone, get_menu_categories())
         session.state = 'selecting_item'
@@ -124,6 +103,25 @@ def process_incoming_message(msg, contact):
     elif text == 'status':
         check_order_status(from_phone)
         return
+
+    # --- 2. Start / Welcome / Greetings ---
+    greetings = ['hi', 'hello', 'hey', 'नमस्ते', 'नमस्कार', 'हाय']
+    is_greeting = any(word in text for word in greetings)
+    print(f"DEBUG: Message text: '{text}' - Is Greeting: {is_greeting}")
+    
+    if is_greeting or text == 'start' or state == 'start':
+        send_reply_buttons(
+            from_phone,
+            "नमस्ते 👋\n100+ ग्रॉसरी आइटम उपलब्ध हैं 🛒",
+            [
+                {"id": "menu", "title": "🛒 WhatsApp Menu"},
+                {"id": "web_menu", "title": "🔍 Search & Order"},
+                {"id": "status", "title": "📦 Order Status"}
+            ]
+        )
+        session.state = "menu"
+        session.save()
+        return   # 🔥 IMPORTANT
 
 
 
