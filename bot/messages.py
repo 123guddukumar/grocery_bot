@@ -34,6 +34,11 @@ def send_message(to: str, msg_type: str, data: dict):
     print("📨 META STATUS:", response.status_code)
     print("📨 META RESPONSE:", response.text)
 
+    if response.status_code >= 400:
+        print(f"❌ FAILED to send message to {to}. Response: {response.text}")
+    else:
+        print(f"✅ SUCCESS: Message sent to {to}")
+
     return response
 
 

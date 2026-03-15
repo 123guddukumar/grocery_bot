@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <title>Apna Bazaar · WhatsApp Grocery Bot</title>
+  <!-- Font Awesome 6 (free) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Roboto, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(145deg, #f8f9fc 0%, #eef2f7 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 1rem;
+    }
+
+    .landing-container {
+      max-width: 1280px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* header / navbar */
+    .navbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 60px;
+      padding: 0.7rem 1.8rem;
+      margin: 1rem 0 2.5rem 0;
+      box-shadow: 0 10px 25px -8px rgba(0, 40, 20, 0.15);
+      border: 1px solid rgba(70, 147, 107, 0.2);
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      background: #1b5e3f;
+      color: white;
+      width: 48px;
+      height: 48px;
+      border-radius: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.9rem;
+      box-shadow: 0 6px 12px rgba(27, 94, 63, 0.3);
+    }
+
+    .brand-name {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #1b5e3f, #3a9b5e);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.2;
+    }
+    .brand-name span {
+      font-size: 1rem;
+      font-weight: 400;
+      background: none;
+      -webkit-text-fill-color: #6c757d;
+      color: #6c757d;
+      margin-left: 5px;
+    }
+
+    .whatsapp-float {
+      background: #25D366;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 0.7rem 1.8rem;
+      font-weight: 600;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 18px rgba(37, 211, 102, 0.35);
+      transition: 0.2s ease;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+    .whatsapp-float i {
+      font-size: 1.8rem;
+    }
+    .whatsapp-float:hover {
+      transform: scale(1.03);
+      background: #20b859;
+      box-shadow: 0 12px 22px rgba(37, 211, 102, 0.45);
+    }
+
+    /* hero */
+    .hero-section {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      background: white;
+      border-radius: 40px;
+      padding: 2.5rem 2.8rem;
+      margin-bottom: 3rem;
+      box-shadow: 0 25px 40px -18px #1b3b2e30;
+      background: rgba(255,255,255,0.7);
+      backdrop-filter: blur(5px);
+      border: 1px solid white;
+    }
+
+    .hero-left {
+      flex: 1 1 300px;
+    }
+    .hero-left h1 {
+      font-size: 3.3rem;
+      font-weight: 700;
+      line-height: 1.2;
+      background: linear-gradient(165deg, #154f31, #2b8253);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-left .tagline {
+      font-size: 1.3rem;
+      margin: 20px 0 10px;
+      color: #2c3e50;
+      font-weight: 400;
+    }
+    .delivery-badge {
+      background: #f0f9f0;
+      border-radius: 60px;
+      padding: 0.7rem 1.5rem;
+      display: inline-block;
+      font-weight: 600;
+      color: #0b4623;
+      border: 1px dashed #2e8b57;
+      margin-top: 20px;
+    }
+    .delivery-badge i {
+      color: #f4b740;
+      margin-right: 6px;
+    }
+
+    .hero-right {
+      flex: 0 0 auto;
+      background: #ffffffd0;
+      border-radius: 48px;
+      padding: 1.2rem 2.2rem;
+      border: 1px solid #deefe5;
+      box-shadow: 0 30px 30px -20px rgba(59, 125, 89, 0.4);
+      text-align: center;
+    }
+    .chat-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-width: 240px;
+    }
+    .msg-bot {
+      background: #e4f0e9;
+      padding: 0.8rem 1.4rem;
+      border-radius: 28px 28px 28px 8px;
+      color: #1c4d2f;
+      text-align: left;
+      font-weight: 500;
+      box-shadow: 0 4px 8px #cbdad0;
+    }
+    .msg-bot i {
+      color: #25D366;
+      margin-right: 6px;
+    }
+    .msg-user {
+      background: #d9eafb;
+      padding: 0.5rem 1.4rem;
+      border-radius: 28px 28px 8px 28px;
+      color: #034ea2;
+      text-align: right;
+      align-self: flex-end;
+      font-weight: 500;
+      box-shadow: 0 4px 8px #c7d6df;
+    }
+    .msg-user i {
+      margin-left: 8px;
+      color: #25D366;
+    }
+
+    /* category & items showcase */
+    .section-title {
+      font-size: 2.4rem;
+      font-weight: 600;
+      margin: 2.5rem 0 1.5rem 0;
+      text-align: center;
+      color: #154f31;
+    }
+    .section-title i {
+      color: #3f9e6b;
+      margin: 0 10px;
+    }
+
+    .category-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 25px;
+      justify-content: center;
+      margin-bottom: 50px;
+    }
+    .category-card {
+      background: white;
+      border-radius: 32px;
+      padding: 1.5rem 1rem 1.5rem 1.8rem;
+      flex: 1 1 200px;
+      max-width: 260px;
+      min-width: 200px;
+      box-shadow: 0 18px 28px -12px #1f4a33;
+      border: 1px solid rgba(70, 150, 100, 0.2);
+      transition: 0.15s;
+      backdrop-filter: blur(4px);
+    }
+    .category-card:hover {
+      transform: translateY(-6px);
+      border-color: #43a875;
+    }
+    .category-title {
+      font-size: 1.7rem;
+      font-weight: 600;
+      color: #1c5e3c;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 1.2rem;
+      padding: 8px 0;
+      border-bottom: 1px dashed #cceae0;
+    }
+    .item-row:last-child {
+      border: none;
+    }
+    .item-name i {
+      width: 22px;
+      color: #3f9e6b;
+      font-size: 1rem;
+    }
+    .item-price {
+      font-weight: 700;
+      color: #2a5f40;
+    }
+
+    /* order & delivery special */
+    .order-delivery-panel {
+      display: flex;
+      flex-wrap: wrap;
+      background: linear-gradient(115deg, #1f543b, #2c6e4f);
+      border-radius: 50px;
+      padding: 2.5rem 2.8rem;
+      color: white;
+      margin: 3rem 0;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 25px 35px -8px #1b4f33;
+    }
+    .order-left {
+      flex: 2 1 300px;
+    }
+    .order-left h2 {
+      font-size: 2.2rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .order-left p {
+      font-size: 1.3rem;
+      opacity: 0.95;
+      margin: 20px 0 8px;
+    }
+    .delivery-chip {
+      background: #f6c445;
+      color: #1e4f2d;
+      padding: 0.8rem 1.8rem;
+      border-radius: 60px;
+      font-weight: 700;
+      font-size: 1.5rem;
+      display: inline-block;
+      box-shadow: 0 8px 0 #a7691a;
+    }
+    .delivery-chip i {
+      margin: 0 8px;
+    }
+    .order-right {
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(10px);
+      padding: 2rem 2rem;
+      border-radius: 40px;
+      text-align: center;
+      border: 2px solid #ffd966;
+      flex: 1 1 250px;
+    }
+    .order-right .big-icon {
+      font-size: 4rem;
+    }
+    .order-right .highlight {
+      font-size: 2rem;
+      font-weight: 700;
+    }
+
+    /* how to start */
+    .steps {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 25px;
+      justify-content: center;
+      margin: 40px 0;
+    }
+    .step-card {
+      background: white;
+      border-radius: 40px;
+      padding: 2rem 1.5rem;
+      flex: 1 1 200px;
+      max-width: 260px;
+      text-align: center;
+      box-shadow: 0 16px 28px #deedd9;
+    }
+    .step-num {
+      background: #e5f4e5;
+      width: 60px;
+      height: 60px;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: 800;
+      color: #0f7842;
+      margin: 0 auto 20px;
+    }
+    .step-card p {
+      font-size: 1.2rem;
+      font-weight: 500;
+    }
+
+    /* footer + wa button */
+    .footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 50px;
+      background: #ffffffc7;
+      backdrop-filter: blur(5px);
+      border-radius: 60px;
+      padding: 1.2rem 2.5rem;
+      border: 1px solid #b7dac7;
+    }
+    .footer-left {
+      font-size: 1.2rem;
+      color: #1a4f2f;
+    }
+    .social-icons i {
+      font-size: 2rem;
+      margin: 0 8px;
+      color: #3f8b60;
+      transition: 0.2s;
+    }
+    .social-icons i:hover {
+      color: #1b5e3f;
+    }
+
+    /* responsive touches */
+    @media screen and (max-width: 700px) {
+      .navbar {
+        border-radius: 30px;
+        padding: 0.7rem 1rem;
+      }
+      .brand-name {
+        font-size: 1.6rem;
+      }
+      .brand-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.5rem;
+      }
+      .hero-left h1 {
+        font-size: 2.3rem;
+      }
+      .hero-section {
+        padding: 1.8rem;
+      }
+      .section-title {
+        font-size: 2rem;
+      }
+      .delivery-chip {
+        font-size: 1.2rem;
+      }
+    }
+    @media screen and (max-width: 480px) {
+      .whatsapp-float span {
+        display: none;
+      }
+      .whatsapp-float i {
+        margin: 0;
+      }
+      .whatsapp-float {
+        padding: 0.8rem 1.2rem;
+      }
+    }
+
+    /* extra polish */
+    button, .whatsapp-float {
+      cursor: pointer;
+    }
+    .text-shadow {
+      text-shadow: 0 2px 4px rgba(0,20,0,0.2);
+    }
+    .fake-link {
+      color: inherit;
+      text-decoration: none;
+    }
+    hr {
+      border: 1px solid #ceeedd;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="landing-container">
+    <!-- header with bot name + whatsapp cta -->
+    <div class="navbar">
+      <div class="logo-area">
+        <div class="brand-icon"><i class="fas fa-basket-shopping"></i></div>
+        <div class="brand-name">apna_bajar <span>• grocery bot</span></div>
+      </div>
+      <div class="whatsapp-float" role="button" aria-label="Start ordering on WhatsApp" onclick="window.open('https://wa.me/919999999999?text=hi','_blank')">
+        <i class="fab fa-whatsapp"></i> <span>Start order</span>
+      </div>
+    </div>
+
+    <!-- hero area with chat preview (hi msg trigger) -->
+    <div class="hero-section">
+      <div class="hero-left">
+        <h1>fresh mart<br>in your pocket</h1>
+        <div class="tagline"><i class="fas fa-seedling" style="color: #3b9e6b;"></i> just say <strong style="background:#e2f0e5; padding:0.1rem 0.8rem; border-radius: 40px;">"hi"</strong> to apna_bajar</div>
+        <div class="delivery-badge"><i class="fas fa-truck"></i> FREE delivery over ₹299 • cheap charges</div>
+        <div style="margin-top: 30px; display: flex; gap: 15px; flex-wrap: wrap;">
+          <span style="background:white; border-radius: 40px; padding:0.5rem 1.2rem; font-weight:600"><i class="fas fa-clock"></i> 30 min slot</span>
+          <span style="background:white; border-radius: 40px; padding:0.5rem 1.2rem; font-weight:600"><i class="fas fa-indian-rupee-sign"></i> COD & UPI</span>
+        </div>
+      </div>
+      <div class="hero-right">
+        <div class="chat-preview">
+          <div class="msg-bot"><i class="fab fa-whatsapp"></i> 🛒 apna_bajar: Welcome! Send "hi" to see items & prices</div>
+          <div class="msg-user"><i class="fas fa-user"></i> hi <i class="fab fa-whatsapp" style="color:#25D366;"></i></div>
+          <div class="msg-bot"><i class="fab fa-whatsapp"></i> 📋 *Fresh Vegetables* 🍅 tomato ₹40/kg • potato ₹30<br>🥛 *Dairy* milk ₹60 • curd ₹35<br>🍞 *Bakery* bread ₹45 • eggs ₹8/pc<br>and more!<br>🚚 delivery just ₹19</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- showcase categories with items & price (exactly as bot shows) -->
+    <div class="section-title"><i class="fas fa-carrot"></i> today’s fresh picks <i class="fas fa-apple-alt"></i></div>
+    <div class="category-grid">
+      <!-- category 1: vegetables -->
+      <div class="category-card">
+        <div class="category-title"><i class="fas fa-leaf"></i> Veg</div>
+        <div class="item-row"><span class="item-name"><i class="fas fa-circle" style="font-size: 0.5rem; vertical-align: middle;"></i> Tomato</span><span class="item-price">₹40/kg</span></div>
+        <div class="item-row"><span class="item-name"><i class="fas fa-circle" style="font-size: 0.5rem;"></i> Potato</span><span class="item-price">₹30/kg</span></div>
+        <div class="item-row"><span class="item-name"><i class="fas fa-circle" style="font-size: 0.5rem;"></i> Onion</span><span class="item-price">₹38/kg</span></div>
+        <div class="item-row"><span class="item-name"><i class="fas fa-circle" style="font-size: 0.5rem;"></i> Spinach</span><span class="item-price">₹25/bunch</span></div>
+      </div>
+      <!-- category 2: dairy & bakery -->
+      <div class="category-card">
+        <div class="category-title"><i class="fas fa-cheese"></i> Dairy</div>
+        <div class="item-row"><span class="item-name"><i class="fas fa-cow"></i> Milk</span><span class="item-price">₹60/L</span></div>
+        <div class="item-row"><span class="item-name"><i class="fas fa-cheese"></i> Curd</span><span class="item-price">₹35/400g</span></div>
+        <div class="item-row"><span class="item-name"><i class="fas fa-egg"></i> Eggs</span><span class="item-price">₹8/pc</span></div>
+        <div class="item-row"><span class="item-name"><i class="fas fa-bread-slice"></i> Bread</span><span class="item-price">₹45</span></div>
+      </div>
+      <!-- category 3: snacks & more -->
+      <div class="category-card">
+        <div class="category-title"><i class="fas fa-cookie"></i> Snacks</div>
+        <div class="item-row"><span class="item-name"><i class="fas fa-candy-cane"></i> Biscuit</span><span class="item-price">₹30</span></div>
+        <div class="item-row"><span class="item-name"><i class="fas fa-mug-hot"></i> Tea</span><span class="item-price">₹250/1kg</span></div>
+        <div class="item-row"><span class="item-name"><i class="fas fa-wheat-awn"></i> Flour</span><span class="item-price">₹55/kg</span></div>
+        <div class="item-row"><span class="item-name"><i class="fas fa-oil-can"></i> Oil</span><span class="item-price">₹145/L</span></div>
+      </div>
+      <!-- category 4: fruits -->
+      <div class="category-card">
+        <div class="category-title"><i class="fas fa-apple-alt"></i> Fruits</div>
+        <div class="item-row"><span class="item-name">🍎 Apple</span><span class="item-price">₹120/kg</span></div>
+        <div class="item-row"><span class="item-name">🍌 Banana</span><span class="item-price">₹50/doz</span></div>
+        <div class="item-row"><span class="item-name">🍊 Orange</span><span class="item-price">₹90/kg</span></div>
+        <div class="item-row"><span class="item-name">🍓 Strawberry</span><span class="item-price">₹90/box</span></div>
+      </div>
+    </div>
+
+    <!-- ORDER AND DELIVERY special panel with cheap delivery -->
+    <div class="order-delivery-panel">
+      <div class="order-left">
+        <h2><i class="fas fa-truck-fast"></i> order & delivery</h2>
+        <p><i class="fas fa-check-circle" style="color: #d4f7b0;"></i> just type items after "hi" – we confirm on WhatsApp</p>
+        <p><i class="fas fa-stopwatch"></i> 7 AM – 10 PM · 30 min slots</p>
+        <div class="delivery-chip"><i class="fas fa-bolt"></i> delivery ₹19 only <i class="fas fa-indian-rupee-sign"></i></div>
+        <p style="margin-top: 20px;"><i class="fas fa-gift"></i> free delivery above ₹299</p>
+      </div>
+      <div class="order-right">
+        <div class="big-icon"><i class="fas fa-message"></i></div>
+        <div class="highlight">"hi" on WhatsApp</div>
+        <div style="font-size: 1.3rem; margin: 15px 0;">👇</div>
+        <div style="background: #ffffff30; border-radius: 60px; padding: 0.8rem; font-weight: 700;">+91 99999 99999</div>
+        <div style="margin-top: 10px;"><i class="fab fa-whatsapp" style="font-size: 2rem;"></i></div>
+      </div>
+    </div>
+
+    <!-- steps / how it works -->
+    <div class="section-title"><i class="fas fa-comment-dots"></i> how to order <i class="fas fa-arrow-right"></i></div>
+    <div class="steps">
+      <div class="step-card"><div class="step-num">1</div><p>Send <strong>"hi"</strong> to our WhatsApp</p><i class="fab fa-whatsapp" style="color:#25D366; font-size: 1.8rem; margin-top: 10px;"></i></div>
+      <div class="step-card"><div class="step-num">2</div><p>Get full price list & categories instantly</p><i class="fas fa-list" style="color:#1e7b48; font-size: 1.8rem;"></i></div>
+      <div class="step-card"><div class="step-num">3</div><p>Type items (e.g. 2 milk, 1 bread)</p><i class="fas fa-cart-plus" style="color:#1e7b48; font-size: 1.8rem;"></i></div>
+      <div class="step-card"><div class="step-num">4</div><p>Pay ₹19 delivery • delivered!</p><i class="fas fa-smile" style="color: #d4a81e; font-size: 2rem;"></i></div>
+    </div>
+
+    <!-- extra cheap delivery highlight -->
+    <div style="background: #e7f5e7; border-radius: 60px; padding: 1.2rem 2rem; text-align: center; margin: 30px 0; font-size: 1.6rem; font-weight: 600; border: 2px solid #ffe28f;">
+      <i class="fas fa-truck" style="color: #cf7f1f;"></i> cheapest in town – ₹19 only! <i class="fas fa-laugh-wink" style="color: #cf7f1f;"></i>
+    </div>
+
+    <!-- footer + wa link -->
+    <div class="footer">
+      <div class="footer-left"><i class="far fa-copyright"></i> apna_bajar · fresh since 2025</div>
+      <div class="social-icons">
+        <i class="fab fa-whatsapp" onclick="window.open('https://wa.me/919999999999?text=hi','_blank')" style="cursor: pointer;"></i>
+        <i class="fab fa-instagram"></i>
+        <i class="fab fa-facebook"></i>
+      </div>
+    </div>
+
+    <!-- tiny dummy message to reinforce: only send hi -->
+    <div style="text-align: center; margin: 20px 0 0; color: #396349;"><i class="fas fa-hand-point-right"></i> start with "hi" – no app, no signup <i class="fas fa-hand-point-left"></i></div>
+  </div>
+
+  <script>
+    // make all whatsapp buttons open a dummy chat (you can replace number)
+    function openWa() {
+      window.open('https://wa.me/919999999999?text=hi', '_blank');
+    }
+    // attach to any element with class that calls same
+    document.querySelectorAll('.whatsapp-float, .social-icons .fa-whatsapp, .order-right').forEach(el => {
+      el.addEventListener('click', (e) => {
+        if (el.classList.contains('social-icons') || el.classList.contains('order-right')) {
+          window.open('https://wa.me/919999999999?text=hi', '_blank');
+        }
+      });
+    });
+    // also click on order-right div
+    document.querySelector('.order-right')?.addEventListener('click', () => {
+      window.open('https://wa.me/919999999999?text=hi', '_blank');
+    });
+  </script>
+  <!-- ensure all interactive hints -->
+  <div style="display: none;">interactivity for whatsapp</div>
+</body>
+</html>

@@ -71,25 +71,23 @@ def process_incoming_message(msg, contact):
     else:
         text = ""
 
-    # Owner / Rider
+    # Owner / Rider commands
     if from_phone == settings.OWNER_PHONE:
-        handle_owner_command(from_phone, text)
-        return
+        if handle_owner_command(from_phone, text):
+            return
     if from_phone in settings.RIDER_PHONES:
-        handle_rider_command(from_phone, text)
-        return
+        if handle_rider_command(from_phone, text):
+            return
 
     # Customer flow
     session = get_session(from_phone)
     state = session.state
 
     # Start / Welcome
-    # if text in ['hi', 'hello', 'हाय', 'नमस्ते'] or state == 'start':
-    #     welcome_message(from_phone)
-    #     session.state = 'menu'
-    #     session.save()
-    #     return
-    if text in ['hi', 'hello', 'हाय', 'नमस्ते'] or state == 'start':
+    greetings = ['hi', 'hello', 'hey', 'नमस्ते', 'नमस्कार', 'हाय', 'menu', 'start']
+    is_greeting = any(word in text for word in greetings)
+    
+    if is_greeting or state == 'start':
         send_reply_buttons(
             from_phone,
             "नमस्ते 👋\n100+ ग्रॉसरी आइटम उपलब्ध हैं 🛒",
@@ -193,9 +191,9 @@ def process_incoming_message(msg, contact):
 def welcome_message(to):
     body = "नमस्ते! हमारी ग्रॉसरी दुकान में आपका स्वागत है।\n\nक्या करना चाहेंगे?"
     buttons = [
-        {"id": "1", "title": "ग्रॉसरी मेनू"},
-        {"id": "2", "title": "ऑर्डर स्टेटस"},
-        {"id": "3", "title": "हेल्प"}
+        {"id": "menu", "title": "ग्रॉसरी मेनू"},
+        {"id": "status", "title": "ऑर्डर स्टेटस"},
+        {"id": "web_menu", "title": "वेब पोर्टल"}
     ]
     send_reply_buttons(to, body, buttons)
 
@@ -364,6 +362,8 @@ def handle_owner_command(phone, text):
                 notify_rider(order)
         else:
             send_text(phone, "कोई पेंडिंग ऑर्डर नहीं है।")
+        return True
+    return False
 
 def notify_rider(order):
     map_link = f"https://maps.google.com/?q={order.location_lat or ''},{order.location_lng or ''}" if order.location_lat else ""
@@ -392,12 +392,15 @@ def handle_rider_command(phone, text):
         order.save()
         send_text(settings.OWNER_PHONE, f"राइडर पिकअप करके निकल गया है - ऑर्डर #{order.id}")
         send_text(order.customer.phone, f"🚚 आपका ऑर्डर #{order.id} आउट फॉर डिलीवरी है!")
+        return True
 
     elif text == 'delivered':
         order.status = 'DELIVERED'
         order.save()
         send_text(order.customer.phone, f"🎉 आपका ऑर्डर #{order.id} डिलीवर हो गया! धन्यवाद 🙏")
         send_text(settings.OWNER_PHONE, f"ऑर्डर #{order.id} डिलीवर हो गया। COD: ₹{order.grand_total}")
+        return True
+    return False
 
 def check_order_status(phone):
     customer = Customer.objects.filter(phone=phone).first()
