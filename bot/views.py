@@ -7,7 +7,7 @@ from .models import *
 from .utils import *
 from .messages import *
 
-VERIFY_TOKEN = "grocery_bot_verify_123"
+# VERIFY_TOKEN = "grocery_bot_verify_123"
 
 
 @csrf_exempt
@@ -17,7 +17,7 @@ def webhook(request):
         token = request.GET.get("hub.verify_token")
         challenge = request.GET.get("hub.challenge")
 
-        if mode == "subscribe" and token == VERIFY_TOKEN:
+        if mode == "subscribe" and token == settings.VERIFY_TOKEN:
             print("Webhook verified")
             return HttpResponse(challenge)
         return HttpResponse("Verification failed", status=403)
@@ -111,7 +111,7 @@ def process_incoming_message(msg, contact):
         return
 
     elif text == 'web_menu':
-        web_url = f"https://grocery-bot-4i8z.onrender.com/menu?phone={from_phone}"
+        web_url = f"https://grocery-bots.onrender.com/menu?phone={from_phone}"
         send_text(
             from_phone,
             f"🔍 100+ आइटम सर्च करें:\n{web_url}\n\nऑर्डर WhatsApp पर auto आएगा ✅"
@@ -164,7 +164,7 @@ def process_incoming_message(msg, contact):
         return
 
     elif text == 'web_add_more':
-        web_url = f"https://grocery-bot-4i8z.onrender.com/menu?phone={from_phone}"
+        web_url = f"https://grocery-bots.onrender.com/menu?phone={from_phone}"
         send_text(
             from_phone,
             f"🛒 और आइटम जोड़ने के लिए नीचे लिंक खोलें 👇\n{web_url}"
