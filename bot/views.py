@@ -39,8 +39,8 @@ def webhook(request):
 
             if "messages" in value:
                 msg = value["messages"][0]
-                print("FROM:", msg.get("from"))
-                print("TYPE:", msg.get("type"))
+                print(f"DEBUG: Processing message from {msg.get('from')} - Type: {msg.get('type')}")
+                print(f"DEBUG: Raw message content: {json.dumps(msg, indent=2)}")
 
                 process_incoming_message(msg, contact)
 
@@ -53,6 +53,7 @@ def webhook(request):
 def process_incoming_message(msg, contact):
     from_phone = msg['from']
     msg_type = msg.get('type')
+    print(f"DEBUG: Processing message from {from_phone} - Type: {msg_type}")
 
     if msg_type == 'text':
         text = msg['text']['body'].strip().lower()
@@ -82,10 +83,12 @@ def process_incoming_message(msg, contact):
     # Customer flow
     session = get_session(from_phone)
     state = session.state
+    print(f"DEBUG: Session for {from_phone} - State: {state}")
 
     # Start / Welcome
     greetings = ['hi', 'hello', 'hey', 'नमस्ते', 'नमस्कार', 'हाय', 'menu', 'start']
     is_greeting = any(word in text for word in greetings)
+    print(f"DEBUG: Message text: '{text}' - Is Greeting: {is_greeting}")
     
     if is_greeting or state == 'start':
         send_reply_buttons(
