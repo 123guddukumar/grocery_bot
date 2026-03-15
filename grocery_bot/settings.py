@@ -142,7 +142,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://*.ngrok-free.dev",
     "https://semimystical-triter-sally.ngrok-free.dev",
     'https://grocerybot.loca.lt',
-    'https://grocery-bot-nffi.onrender.com'
+    'https://grocery-bot-4i8z.onrender.com'
     
 ]
 
