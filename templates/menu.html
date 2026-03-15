@@ -1,215 +1,440 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Grocery Menu</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grocery Menu | Apna Bajar</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2ecc71;
+            --primary-dark: #27ae60;
+            --secondary: #2c3e50;
+            --accent: #f1c40f;
+            --bg: #f8f9fa;
+            --text: #2d3436;
+            --white: #ffffff;
+            --shadow: 0 10px 30px rgba(0,0,0,0.08);
+            --radius: 20px;
+        }
 
-<style>
-* {
-  box-sizing: border-box;
-  font-family: 'Segoe UI', sans-serif;
-}
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
 
-body {
-  margin: 0;
-  background: #f6f7fb;
-}
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            padding-bottom: 100px;
+        }
 
-header {
-  background: linear-gradient(135deg,#2ecc71,#27ae60);
-  color: white;
-  padding: 16px;
-  text-align: center;
-  font-size: 20px;
-  font-weight: bold;
-}
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: var(--white);
+            padding: 30px 20px;
+            text-align: center;
+            border-bottom-left-radius: 40px;
+            border-bottom-right-radius: 40px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
 
-.container {
-  padding: 12px;
-}
+        header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
 
-#search {
-  width: 100%;
-  padding: 12px;
-  font-size: 16px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  margin-bottom: 15px;
-}
+        header p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill,minmax(160px,1fr));
-  gap: 12px;
-}
+        /* Search & Filters */
+        .controls {
+            padding: 0 20px;
+            max-width: 800px;
+            margin: 0 auto 20px;
+        }
 
-.card {
-  background: white;
-  border-radius: 12px;
-  padding: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
+        .search-box {
+            position: relative;
+            margin-bottom: 15px;
+        }
 
-.card b {
-  font-size: 15px;
-}
+        .search-box i {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #95a5a6;
+        }
 
-.price {
-  color: #27ae60;
-  font-weight: bold;
-  margin: 6px 0;
-}
+        #search-input {
+            width: 100%;
+            padding: 15px 15px 15px 50px;
+            border-radius: 30px;
+            border: none;
+            box-shadow: var(--shadow);
+            font-size: 1rem;
+            outline: none;
+        }
 
-.qty {
-  width: 100%;
-  padding: 6px;
-  margin-bottom: 8px;
-}
+        .categories {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 10px 0;
+            scrollbar-width: none;
+        }
 
-.add-btn {
-  background: #2ecc71;
-  color: white;
-  border: none;
-  padding: 8px;
-  border-radius: 6px;
-  cursor: pointer;
-}
+        .categories::-webkit-scrollbar {
+            display: none;
+        }
 
-.add-btn:hover {
-  background: #27ae60;
-}
+        .cat-btn {
+            background: var(--white);
+            padding: 10px 20px;
+            border-radius: 25px;
+            white-space: nowrap;
+            cursor: pointer;
+            border: 1px solid transparent;
+            font-weight: 600;
+            transition: 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
 
-.footer {
-  position: sticky;
-  bottom: 0;
-  background: white;
-  padding: 12px;
-  box-shadow: 0 -3px 10px rgba(0,0,0,0.1);
-}
+        .cat-btn.active {
+            background: var(--primary);
+            color: var(--white);
+        }
 
-.place-btn {
-  width: 100%;
-  background: #25d366;
-  color: white;
-  font-size: 18px;
-  border: none;
-  padding: 14px;
-  border-radius: 10px;
-}
-</style>
+        /* Grid */
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 15px;
+            padding: 0 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 15px;
+            box-shadow: var(--shadow);
+            transition: 0.3s;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border: 1px solid rgba(0,0,0,0.02);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-img {
+            width: 100%;
+            height: 120px;
+            background: #f1f2f6;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .card-img img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: cover;
+        }
+
+        .card-img i {
+            font-size: 3rem;
+            color: #bdc3c7;
+        }
+
+        .card h3 {
+            font-size: 1rem;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .card-price {
+            color: var(--primary-dark);
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+
+        .qty-control {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f1f2f6;
+            border-radius: 10px;
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+
+        .qty-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            border: none;
+            background: var(--white);
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .qty-input {
+            width: 40px;
+            text-align: center;
+            background: transparent;
+            border: none;
+            font-weight: 600;
+        }
+
+        .add-btn {
+            width: 100%;
+            padding: 10px;
+            border-radius: 12px;
+            border: none;
+            background: var(--primary);
+            color: var(--white);
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .add-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Footer Cart Bar */
+        .cart-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: var(--secondary);
+            color: var(--white);
+            padding: 15px 25px;
+            border-radius: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(100px);
+            transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .cart-bar.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .cart-info h4 {
+            font-size: 1.1rem;
+        }
+
+        .cart-info span {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        .order-btn {
+            background: var(--primary);
+            color: var(--white);
+            border: none;
+            padding: 12px 25px;
+            border-radius: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .product-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
 </head>
-
 <body>
 
-<header>🛒 Grocery Menu</header>
+    <header>
+        <p>नमस्ते 👋 Apna Bajar</p>
+        <h1>Fresh Grocery Delivery</h1>
+        <p><i class="fas fa-truck"></i> ₹30 Delivery below ₹500 | FREE above!</p>
+    </header>
 
-<div class="container">
+    <div class="controls">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="search-input" placeholder="Search vegetables, fruits, rice..." onkeyup="filterProducts()">
+        </div>
 
-<input type="text" id="search" placeholder="🔍 Search product..." onkeyup="filter()" />
+        <div class="categories" id="cat-tabs">
+            <div class="cat-btn active" onclick="filterCategory('All')">All</div>
+            {% for cat in categories %}
+            <div class="cat-btn" onclick="filterCategory('{{ cat }}')">{{ cat }}</div>
+            {% endfor %}
+        </div>
+    </div>
 
-<div class="grid" id="products">
+    <div class="product-grid" id="product-list">
+        {% for p in products %}
+        <div class="card" data-name="{{ p.name|lower }}" data-cat="{{ p.category }}">
+            <div>
+                <div class="card-img">
+                    {% if p.image_url %}
+                    <img src="{{ p.image_url }}" alt="{{ p.name }}">
+                    {% else %}
+                    <i class="fas fa-shopping-basket"></i>
+                    {% endif %}
+                </div>
+                <h3>{{ p.name }}</h3>
+                <div class="card-price">₹{{ p.price|floatformat:0 }}</div>
+            </div>
+            
+            <div>
+                <div class="qty-control">
+                    <button class="qty-btn" onclick="changeQty('{{ p.id }}', -0.5)">-</button>
+                    <input type="text" value="1" id="qty-{{ p.id }}" class="qty-input" readonly>
+                    <button class="qty-btn" onclick="changeQty('{{ p.id }}', 0.5)">+</button>
+                </div>
+                <button class="add-btn" onclick="addToCart('{{ p.id }}', '{{ p.name }}', {{ p.price }})">
+                    Add to Cart
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
 
-{% for p in products %}
-<div class="card" data-name="{{ p.name|lower }}">
-  <b>{{ p.name }}</b>
-  <div class="price">₹{{ p.price }}</div>
+    <div class="cart-bar" id="cart-bar">
+        <div class="cart-info">
+            <h4 id="cart-total">Total: ₹0</h4>
+            <span id="cart-items">0 items in cart</span>
+        </div>
+        <button class="order-btn" onclick="placeOrder()">
+            Place Order <i class="fab fa-whatsapp"></i>
+        </button>
+    </div>
 
-  <div style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">
-    <button onclick="dec({{p.id}})">➖</button>
-    <input type="number" min="1" value="1" id="q{{p.id}}" class="qty">
-    <button onclick="inc({{p.id}})">➕</button>
-  </div>
+    <script>
+        let cart = {};
+        const phone = "{{ phone }}";
 
-  <button class="add-btn" onclick="add('{{p.name}}', {{p.id}})">
-    Add to Cart
-  </button>
-</div>
+        function changeQty(id, delta) {
+            let input = document.getElementById('qty-' + id);
+            let val = parseFloat(input.value);
+            val = Math.max(0.5, val + delta);
+            input.value = val;
+        }
 
-{% endfor %}
+        function addToCart(id, name, price) {
+            let qty = parseFloat(document.getElementById('qty-' + id).value);
+            if (cart[id]) {
+                cart[id].qty += qty;
+            } else {
+                cart[id] = { name, price, qty };
+            }
+            updateCartUI();
+        }
 
-</div>
-</div>
+        function updateCartUI() {
+            let total = 0;
+            let count = 0;
+            for (let id in cart) {
+                total += cart[id].price * cart[id].qty;
+                count++;
+            }
 
-<div class="footer">
-<button class="place-btn" onclick="send()">📦 Place Order on WhatsApp</button>
-</div>
+            let delivery = (total > 0 && total < 500) ? 30 : 0;
+            let grandTotal = total + delivery;
 
-<script>
-const CART_KEY = "cart_{{ phone }}"
+            document.getElementById('cart-total').innerText = `Total: ₹${grandTotal.toFixed(0)}`;
+            document.getElementById('cart-items').innerText = `${count} items | Delivery: ₹${delivery}`;
 
-// 🔥 LOAD CART
-let cart = JSON.parse(localStorage.getItem(CART_KEY)) || {}
+            if (count > 0) {
+                document.getElementById('cart-bar').classList.add('active');
+            } else {
+                document.getElementById('cart-bar').classList.remove('active');
+            }
+        }
 
-// ✅ AUTO CLEAR CART ON PAGE LOAD (VERY IMPORTANT)
-fetch("/api/check-active-order/?phone={{ phone }}")
-.then(r => r.json())
-.then(d => {
-  if(d.clear_cart){
-    localStorage.removeItem(CART_KEY)
-    cart = {}
-    console.log("🧹 Old cart cleared")
-  }
-})
+        function filterProducts() {
+            let query = document.getElementById('search-input').value.toLowerCase();
+            let cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                let name = card.getAttribute('data-name');
+                if (name.includes(query)) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
 
-function add(name, id){
-  let q = parseInt(document.getElementById("q"+id).value)
+        function filterCategory(cat) {
+            // Update UI tabs
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if(btn.innerText === cat) btn.classList.add('active');
+            });
 
-  if(cart[name]){
-    cart[name] += q
-  } else {
-    cart[name] = q
-  }
+            let cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                let cardCat = card.getAttribute('data-cat');
+                if (cat === 'All' || cardCat === cat) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
 
-  localStorage.setItem(CART_KEY, JSON.stringify(cart))
-  alert(`${name} x ${q} added`)
-}
+        function placeOrder() {
+            let itemSummary = "";
+            let cartData = {}; // For bot parsing
+            let total = 0;
 
-function inc(id){
-  let q = document.getElementById("q"+id)
-  q.value = parseInt(q.value || 1) + 1
-}
+            for (let id in cart) {
+                let itemTotal = cart[id].price * cart[id].qty;
+                itemSummary += `• ${cart[id].name} ${cart[id].qty}kg - ₹${itemTotal}\n`;
+                cartData[id] = cart[id].qty;
+                total += itemTotal;
+            }
+            
+            let delivery = (total < 500) ? 30 : 0;
+            let grandTotal = total + delivery;
 
-function dec(id){
-  let q = document.getElementById("q"+id)
-  if(q.value > 1) q.value--
-}
+            let payload = `ORDER_DATA:${JSON.stringify(cartData)}\n\n`;
+            payload += `🛒 *आपका ऑर्डर (Web Order)*\n${itemSummary}`;
+            payload += `\nआइटम टोटल: ₹${total}`;
+            payload += `\nडिलीवरी: ₹${delivery}`;
+            payload += `\nग्रैंड टोटल: *₹${grandTotal}*`;
+            payload += `\n\nऑर्डर कन्फर्म करने के लिए ऊपर वाला मैसेज सेंड करें।`;
 
-function send(){
-  if(Object.keys(cart).length === 0){
-    alert("Cart empty")
-    return
-  }
-
-  fetch("/api/web-order/",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      phone: "{{ phone }}",
-      cart: cart
-    })
-  })
-  .then(r=>r.json())
-  .then(d=>{
-    alert(d.message)
-
-    // ❗ DO NOT CLEAR HERE
-    // Real clear happens after WhatsApp confirm
-  })
-}
-
-function filter(){
-  let v = document.getElementById("search").value.toLowerCase()
-  document.querySelectorAll(".card").forEach(c=>{
-    c.style.display = c.dataset.name.includes(v) ? "block" : "none"
-  })
-}
-</script>
-
-
-
+            const botNumber = "9115556414417"; 
+            const encodedMsg = encodeURIComponent(payload);
+            window.location.href = `https://wa.me/${botNumber}?text=${encodedMsg}`;
+        }
+    </script>
 </body>
 </html>

@@ -19,7 +19,7 @@ def calculate_totals(cart):
             total += product.price * Decimal(str(qty))
         except:
             pass
-    delivery = Decimal('50') if total < Decimal('500') else Decimal('0')
+    delivery = Decimal('30') if total < Decimal('500') else Decimal('0')
     grand = total + delivery
     return total, delivery, grand
 
@@ -34,7 +34,7 @@ def format_cart(cart):
             lines.append(f"• {p.name} - {qty} @ ₹{p.price} = ₹{amt}")
         except:
             lines.append(f"• आइटम {pid} - {qty} (हटा दिया गया)")
-    delivery = Decimal('50') if total < Decimal('500') else Decimal('0')
+    delivery = Decimal('30') if total < Decimal('500') else Decimal('0')
     grand = total + delivery
     lines.append("")
     lines.append(f"आइटम टोटल: ₹{total}")

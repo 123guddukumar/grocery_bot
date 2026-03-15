@@ -2,6 +2,7 @@ import json
 from decimal import Decimal
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from django.conf import settings
 from .models import *
 from .utils import *
@@ -104,6 +105,29 @@ def process_incoming_message(msg, contact):
         check_order_status(from_phone)
         return
 
+    # 1. Handle Web Order payload
+    if text.startswith("ORDER_DATA:"):
+        try:
+            data_str = text.split("\n")[0].split("ORDER_DATA:")[1]
+            cart_data = json.loads(data_str)
+            session.cart = {str(k): float(v) for k, v in cart_data.items()}
+            session.state = "viewing_cart"
+            session.save()
+            
+            cart_text, _, _, _ = format_cart(session.cart)
+            send_reply_buttons(
+                from_phone,
+                "🛒 वेब ऑर्डर लोड हो गया!\n\nक्या आप इस ऑर्डर को कन्फर्म करना चाहते हैं?\n\n" + cart_text,
+                [
+                    {"id": "confirm_order", "title": "✅ हाँ, कन्फर्म करें"},
+                    {"id": "back_to_menu", "title": "❌ नहीं, सुधारें"}
+                ]
+            )
+            return
+        except:
+            send_text(from_phone, "ऑर्डर डेटा पढ़ने में समस्या हुई। कृपया वेबसाइट से दोबारा कोशिश करें।")
+            return
+
     # --- 2. Start / Welcome / Greetings ---
     greetings = ['hi', 'hello', 'hey', 'नमस्ते', 'नमस्कार', 'हाय']
     is_greeting = any(word in text for word in greetings)
@@ -179,6 +203,9 @@ def process_incoming_message(msg, contact):
         return
     if state == 'collecting_address':
         handle_address_input(from_phone, text)
+        return
+    if state == 'collecting_alt_phone':
+        handle_alt_phone_input(from_phone, text)
         return
 
     # Fallback
@@ -283,8 +310,20 @@ def handle_address_input(phone, address):
     customer = Customer.objects.get(phone=phone)
     customer.address = address
     customer.save()
-
+    send_text(phone, "एक अल्टरनेट मोबाइल नंबर दें (Emergency के लिए):")
     session = get_session(phone)
+    session.state = 'collecting_alt_phone'
+    session.save()
+
+def handle_alt_phone_input(phone, alt_phone):
+    customer = Customer.objects.get(phone=phone)
+    customer.alternate_phone = alt_phone
+    customer.save()
+    finalize_order(phone)
+
+def finalize_order(phone):
+    session = get_session(phone)
+    customer = Customer.objects.get(phone=phone)
     cart = session.cart
     item_total, delivery, grand_total = calculate_totals(cart)
 
@@ -333,6 +372,7 @@ def notify_owner_new_order(order):
     text = f"""नया ऑर्डर! #{order.id}
 नाम: {order.customer.name}
 मोबाइल: {order.customer.phone}
+अल्टरनेट: {order.customer.alternate_phone or 'नहीं दिया'}
 एड्रेस: {order.customer.address}
 मैप: {map_link}
 
@@ -428,9 +468,11 @@ from django.shortcuts import render
 
 def web_menu(request):
     phone = request.GET.get("phone")
-    products = Product.objects.filter(active=True)
+    products = Product.objects.filter(active=True).order_by('category', 'name')
+    categories = sorted(list(set(p.category for p in products if p.category)))
     return render(request, "menu.html", {
         "products": products,
+        "categories": categories,
         "phone": phone
     })
 
@@ -466,12 +508,6 @@ def web_order(request):
         ]
     )
 
-
-    return JsonResponse({
-        "message": "Order WhatsApp pe bhej diya gaya ✅"
-    })
-
-from django.views.decorators.http import require_POST
 
 @csrf_exempt
 @require_POST
